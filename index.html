@@ -643,35 +643,61 @@ function parseTrendSheet(csvText) {
   const rows = parseCSV(csvText);
   if (!rows.length) return { grandTotal: null, dcs: [], months: [] };
 
-  const header = rows[0];
-  const months = [];
-  const monthCols = {};
+  const EN_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const TH_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 
-  for (let i = 1; i < header.length; i++) {
-    const cell = header[i];
-    if (!cell) continue;
-    const sep = cell.lastIndexOf('_');
-    if (sep < 0) continue;
-    const month = cell.slice(0, sep);
-    const type = cell.slice(sep + 1);
-    if (type !== 'all' && type !== 'ex') continue;
-    if (!monthCols[month]) { monthCols[month] = {}; months.push(month); }
-    monthCols[month][type] = i;
+  // Find the row with month names (Jan/Feb/... or ม.ค./ก.พ./...)
+  const allMonthKeys = [...EN_MONTHS, ...TH_MONTHS];
+  let monthRowIdx = -1;
+  for (let i = 0; i < Math.min(8, rows.length); i++) {
+    if (rows[i].some(c => c && allMonthKeys.some(m => c.trim().startsWith(m)))) {
+      monthRowIdx = i; break;
+    }
+  }
+  if (monthRowIdx < 0) return { grandTotal: null, dcs: [], months: [] };
+
+  const mRow = rows[monthRowIdx];
+  const tRow = rows[monthRowIdx + 1] || [];
+  const dataStart = monthRowIdx + 2;
+
+  // Map column indices to month + type
+  const months = [];
+  const colMap = {}; // colIdx → { month, type: 'all'|'ex' }
+  let curMonth = '';
+  for (let i = 1; i < mRow.length; i++) {
+    if (mRow[i] && mRow[i].trim()) {
+      const raw = mRow[i].trim();
+      // Translate EN → TH if needed
+      const enIdx = EN_MONTHS.indexOf(raw);
+      curMonth = enIdx >= 0 ? TH_MONTHS[enIdx] : raw;
+      if (!months.includes(curMonth)) months.push(curMonth);
+    }
+    if (!curMonth) continue;
+    const typeCell = (tRow[i] || '').toLowerCase();
+    const type = (typeCell.includes('ตัด') || typeCell.includes('ex') || typeCell.includes('excl')) ? 'ex' : 'all';
+    colMap[i] = { month: curMonth, type };
   }
 
   if (!months.length) return { grandTotal: null, dcs: [], months: [] };
 
+  // Build monthCols[month][type] = colIdx
+  const monthCols = {};
+  Object.entries(colMap).forEach(([idx, { month, type }]) => {
+    if (!monthCols[month]) monthCols[month] = {};
+    monthCols[month][type] = +idx;
+  });
+
   let grandTotal = null;
   const dcs = [];
-
-  for (let i = 1; i < rows.length; i++) {
+  for (let i = dataStart; i < rows.length; i++) {
     const r = rows[i];
     const name = (r[0] || '').trim();
     if (!name) continue;
     const monthData = {};
     for (const m of months) {
-      const all = monthCols[m].all != null ? toPercent(r[monthCols[m].all]) : null;
-      const ex  = monthCols[m].ex  != null ? toPercent(r[monthCols[m].ex])  : null;
+      const aIdx = monthCols[m]?.all, eIdx = monthCols[m]?.ex;
+      const all = aIdx != null ? toPercent(r[aIdx]) : null;
+      const ex  = eIdx != null ? toPercent(r[eIdx])  : null;
       if (all != null) monthData[m] = { all, ex: ex ?? all };
     }
     if (!Object.keys(monthData).length) continue;
