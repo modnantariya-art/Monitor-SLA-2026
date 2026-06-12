@@ -3,405 +3,877 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>สถานะบิลคงค้าง · ราย DC</title>
+<title>SLA Dashboard — ศูนย์กระจายสินค้า</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
 <style>
-  html, body { margin: 0; padding: 0; }
-  * { -webkit-font-smoothing: antialiased; box-sizing: border-box; }
+:root{
+  --accent:#1f5fb0;
+  --bg:#f8fafb;
+  --surface:#ffffff;
+  --surface-2:#f3f6f9;
+  --surface-3:#eaeef3;
+  --border:#dde3ea;
+  --border-strong:#c4ccd6;
+  --text:#2b3340;
+  --muted:#6a737f;
+  --faint:#9099a3;
+  --pass:#15935f;
+  --warn:#c1881a;
+  --fail:#d23b34;
+  --pass-bg:#e3f5ec;
+  --warn-bg:#f8eed6;
+  --fail-bg:#fbe6e3;
+  --radius:12px;
+  --radius-sm:8px;
+  --shadow:0 1px 2px rgba(43,51,64,0.06),0 4px 16px rgba(43,51,64,0.05);
+  --pad:22px;
+  --font-th:"IBM Plex Sans Thai","IBM Plex Sans",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+html[data-density="compact"]{--pad:15px;}
+html[data-density="comfy"]{--pad:30px;}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{font-family:var(--font-th);background:var(--bg);color:var(--text);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+.tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum";}
+.muted{color:var(--muted);}
+.status-text-pass{color:var(--pass);}
+.status-text-warn{color:#a8740f;}
+.status-text-fail{color:var(--fail);}
+
+.app{min-height:100vh;display:flex;flex-direction:column;}
+.content{flex:1;width:100%;max-width:1200px;margin:0 auto;padding:28px var(--pad) 56px;}
+
+/* topbar */
+.topbar{position:sticky;top:0;z-index:30;background:rgba(250,251,252,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);}
+.topbar-inner{max-width:1200px;margin:0 auto;padding:14px var(--pad);display:flex;align-items:center;justify-content:space-between;gap:16px;}
+.brand{display:flex;align-items:center;gap:12px;}
+.brand-mark{width:42px;height:42px;border-radius:10px;background:var(--accent);color:#fff;font-family:var(--font-mono);font-weight:600;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.brand-title{font-weight:600;font-size:17px;letter-spacing:-.01em;white-space:nowrap;}
+.brand-sub{font-size:12.5px;color:var(--muted);}
+.topbar-right{display:flex;align-items:center;gap:16px;}
+.period{text-align:right;display:flex;flex-direction:column;gap:1px;}
+.period-label{font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;}
+.period-val{font-weight:600;font-size:15px;}
+.period-arrow{color:var(--accent);margin:0 2px;}
+.refresh-btn{appearance:none;border:1px solid var(--border-strong);background:var(--surface);color:var(--muted);font-family:inherit;font-size:12.5px;padding:7px 13px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:all .15s;}
+.refresh-btn:hover{border-color:var(--accent);color:var(--accent);}
+.refresh-btn:disabled{opacity:.5;cursor:default;}
+.refresh-icon{font-size:14px;display:inline-block;}
+.refresh-icon.spinning{animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.last-updated{font-size:11.5px;color:var(--faint);}
+.data-date{font-size:11.5px;color:var(--muted);font-weight:500;}
+
+/* tabs */
+.tabs{max-width:1200px;margin:0 auto;padding:0 var(--pad);display:flex;gap:4px;}
+.tab{appearance:none;border:none;background:none;cursor:pointer;font-family:inherit;padding:12px 18px 13px;display:flex;flex-direction:column;align-items:center;color:var(--muted);border-bottom:2.5px solid transparent;margin-bottom:-1px;transition:color .15s;}
+.tab-th{font-weight:600;font-size:15px;white-space:nowrap;}
+.tab:hover{color:var(--text);}
+.tab-on{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* section head */
+.section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap;}
+.section-title{font-size:21px;font-weight:600;margin:0 0 4px;letter-spacing:-.01em;}
+.section-desc{margin:0;color:var(--muted);font-size:13.5px;max-width:60ch;}
+.trend-legend{display:flex;gap:14px;align-items:center;flex-wrap:wrap;}
+
+/* delta / trend */
+.delta{display:inline-flex;align-items:center;gap:3px;font-variant-numeric:tabular-nums;font-weight:600;border-radius:6px;padding:2px 7px;}
+.delta-arrow{font-size:.72em;}
+.delta-up{color:var(--pass);background:var(--pass-bg);}
+.delta-down{color:var(--fail);background:var(--fail-bg);}
+.delta-flat{color:var(--muted);background:var(--surface-3);}
+.delta-sm{font-size:12px;padding:1px 6px;}
+.delta-md{font-size:13.5px;}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0;}
+.dot-up{background:var(--pass);}
+.dot-down{background:var(--fail);}
+.dot-flat{background:var(--faint);}
+.statusdot{display:inline-flex;align-items:center;gap:6px;}
+.statusdot-label{font-size:12.5px;color:var(--muted);font-weight:500;white-space:nowrap;}
+.legend-item{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;}
+
+/* catmark */
+.catmark{display:inline-flex;width:30px;height:30px;border-radius:8px;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.catmark-total{background:var(--accent);color:#fff;}
+.catmark-general{background:var(--surface-3);color:var(--text);}
+.catmark-cold{background:#d8e8f6;color:#2a6aa8;}
+
+/* overview rows */
+.ov-rows{display:flex;flex-direction:column;gap:16px;}
+.ovrow{display:grid;grid-template-columns:190px 1fr;gap:24px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px 26px;}
+.ovrow-cat{display:flex;align-items:center;gap:12px;}
+.ovrow-catname{font-weight:600;font-size:17px;white-space:nowrap;}
+.ovrow-metrics{display:grid;grid-template-columns:1fr 1px 1fr;gap:32px;align-items:start;}
+.ovrow-div{background:var(--border);align-self:stretch;}
+.ovmetric{display:flex;flex-direction:column;gap:12px;}
+.ovmetric-label{font-size:12.5px;color:var(--muted);font-weight:500;}
+.ovmetric-main{display:flex;align-items:baseline;gap:14px;}
+.ovmetric-val{font-size:40px;font-weight:600;letter-spacing:-.02em;line-height:1;}
+.ovmetric-pct{font-size:.45em;font-weight:500;color:var(--muted);margin-left:2px;}
+.prevref{font-size:13.5px;}
+
+/* kpi cards */
+.kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+.kpicard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+.kpicard-head{display:flex;align-items:center;gap:11px;padding:16px 18px;border-bottom:1px solid var(--border);}
+.kpicard-title{font-weight:600;font-size:16px;}
+.kpicard-body{padding:6px 18px 18px;}
+.kpi-metric{padding:14px 0;}
+.kpi-metric-label{font-size:12.5px;color:var(--muted);margin-bottom:8px;font-weight:500;}
+.kpi-divider{height:1px;background:var(--border);}
+.mblock-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:9px;}
+.mblock-val{font-size:34px;font-weight:600;letter-spacing:-.02em;line-height:1;}
+.mblock-pct{font-size:.5em;font-weight:500;color:var(--muted);margin-left:2px;}
+
+/* split */
+.split-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.splitcol{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:6px 20px 14px;}
+.splitcol-head{display:flex;align-items:baseline;gap:8px;padding:14px 0;border-bottom:1px solid var(--border);margin-bottom:6px;}
+.splitcol-tag{font-weight:600;font-size:15px;}
+.splitrow{padding:14px 0;border-bottom:1px solid var(--surface-3);}
+.splitrow:last-child{border-bottom:none;}
+.splitrow-cat{display:flex;align-items:center;gap:9px;font-weight:500;font-size:14px;margin-bottom:8px;}
+.splitrow-val{display:flex;align-items:baseline;gap:10px;margin-bottom:9px;}
+.splitrow-val .tnum{font-size:26px;font-weight:600;letter-spacing:-.02em;}
+
+/* matrix */
+.matrixwrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+.matrix{width:100%;border-collapse:collapse;}
+.matrix th,.matrix td{padding:13px 16px;text-align:right;font-variant-numeric:tabular-nums;}
+.matrix thead th{background:var(--surface-2);font-size:12.5px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);text-align:center;}
+.matrix .matrix-sub th{font-size:11.5px;font-weight:500;padding:8px 16px;}
+.matrix .matrix-cat{text-align:left;}
+.matrix tbody .matrix-cat{display:flex;align-items:center;gap:10px;font-weight:600;font-size:14.5px;}
+.matrix tbody td{border-bottom:1px solid var(--surface-3);}
+.matrix tbody tr:last-child td{border-bottom:none;}
+.matrix tbody td b{font-size:15px;}
+.matrix-gap{border-left:1px solid var(--border);}
+
+/* controls */
+.controls{display:flex;flex-wrap:wrap;gap:16px 20px;align-items:flex-end;margin-bottom:18px;padding:16px 18px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);}
+.control-group{display:flex;flex-direction:column;gap:6px;}
+.control-grow{flex:1;min-width:160px;}
+.control-label{font-size:11.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em;font-weight:600;}
+.segmented{display:inline-flex;background:var(--surface-3);border-radius:9px;padding:3px;gap:2px;}
+.seg-btn{appearance:none;border:none;background:none;cursor:pointer;font-family:inherit;padding:7px 13px;border-radius:7px;color:var(--muted);transition:all .12s;font-weight:600;font-size:13px;white-space:nowrap;}
+.seg-btn:hover{color:var(--text);}
+.seg-on{background:var(--surface);color:var(--accent);box-shadow:0 1px 3px rgba(43,51,64,0.1);}
+.search-input,.region-select{font-family:inherit;font-size:14px;padding:9px 12px;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface);color:var(--text);width:100%;}
+.search-input:focus,.region-select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(31,95,176,0.16);}
+.region-select{cursor:pointer;min-width:160px;}
+
+/* DC dual table */
+.dc-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+.dc-table{width:100%;border-collapse:collapse;}
+.dc-table th{background:var(--surface-2);text-align:left;font-size:12px;color:var(--muted);font-weight:600;padding:12px 16px;border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;}
+.dc-table th.sortable{cursor:pointer;user-select:none;}
+.dc-table th.sortable:hover{color:var(--accent);}
+.th-num,.td-num{text-align:right;}
+.dc-table td{padding:11px 16px;border-bottom:1px solid var(--surface-3);vertical-align:middle;}
+.dc-table tbody tr:last-child td{border-bottom:none;}
+.dc-table tbody tr:hover{background:var(--surface-2);}
+.row-down{box-shadow:inset 3px 0 0 var(--fail);}
+.row-up{box-shadow:inset 3px 0 0 var(--pass);}
+.td-name{min-width:160px;}
+.dc-name{display:block;font-weight:600;font-size:14px;}
+.td-num.tnum b{font-size:15px;}
+.empty{padding:40px;text-align:center;color:var(--muted);}
+.dc-table-dual th.grp-gap,.dc-table-dual td.grp-gap{border-left:1px solid var(--border);}
+.dc-grouphead th{text-align:center;border-bottom:1px solid var(--border);}
+.dc-subhead th{font-weight:500;font-size:11.5px;padding-top:8px;padding-bottom:8px;}
+
+/* DC mobile cards */
+.dc-cards{display:none;flex-direction:column;gap:10px;}
+.dccard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow);padding:14px 16px;}
+.dccard-head{font-weight:600;font-size:15px;margin-bottom:12px;}
+.dccard-modes{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.modecol{display:flex;flex-direction:column;gap:4px;padding-left:12px;border-left:2px solid var(--surface-3);}
+.modecol-lab{font-size:11.5px;color:var(--muted);font-weight:500;}
+.modecol-main{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+.modecol-jun{font-size:21px;font-weight:600;letter-spacing:-.02em;}
+.modecol-prev{font-size:11.5px;}
+.dccard-down{box-shadow:inset 3px 0 0 var(--fail),var(--shadow);}
+.dccard-up{box-shadow:inset 3px 0 0 var(--pass),var(--shadow);}
+
+/* analysis */
+.stat-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+.stat-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;}
+.stat-box.stat-fail{border-top:3px solid var(--fail);}
+.stat-box.stat-critical{border-top:3px solid var(--warn);}
+.stat-box.stat-ok{border-top:3px solid var(--pass);}
+.stat-num{font-size:32px;font-weight:600;letter-spacing:-.02em;line-height:1;margin-bottom:8px;}
+.stat-fail .stat-num{color:var(--fail);}
+.stat-critical .stat-num{color:#a8740f;}
+.stat-ok .stat-num{color:var(--pass);}
+.stat-lab{font-size:13px;font-weight:500;line-height:1.35;}
+.rank-list{display:flex;flex-direction:column;gap:8px;}
+.rankrow{display:flex;align-items:center;gap:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px 18px 13px 14px;box-shadow:var(--shadow);}
+.urg-critical{box-shadow:inset 4px 0 0 var(--fail),var(--shadow);}
+.urg-watch{box-shadow:inset 4px 0 0 var(--warn),var(--shadow);}
+.urg-ok{box-shadow:inset 4px 0 0 var(--pass),var(--shadow);}
+.rank-no{font-family:var(--font-mono);font-size:16px;font-weight:600;color:var(--faint);width:26px;text-align:center;flex-shrink:0;}
+.rank-dc{min-width:170px;display:flex;flex-direction:column;gap:6px;align-items:flex-start;}
+.rank-modes{display:flex;gap:22px;flex-wrap:wrap;font-size:13px;}
+.rank-mode{display:inline-flex;align-items:center;gap:7px;}
+.rank-mode-lab{color:var(--muted);font-size:12px;}
+.rank-mode b{font-size:15px;}
+.rank-bar-wrap{flex:1;display:flex;flex-direction:column;gap:7px;min-width:0;}
+.rank-bar-track{height:8px;border-radius:5px;background:var(--surface-3);overflow:hidden;}
+.rank-bar-fill{height:100%;border-radius:5px;}
+.rank-bar-up{background:var(--pass);}
+.rank-bar-down{background:var(--fail);}
+.rank-bar-flat{background:var(--faint);}
+.utag{font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:999px;white-space:nowrap;}
+.utag-critical{background:var(--fail-bg);color:var(--fail);}
+.utag-watch{background:var(--warn-bg);color:#8a6109;}
+.utag-ok{background:var(--pass-bg);color:var(--pass);}
+.action-note{margin-top:24px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;}
+.action-note-title{font-weight:600;font-size:15px;margin-bottom:12px;}
+.action-list{margin:0;padding-left:20px;font-size:13.5px;line-height:1.7;}
+.action-list li{margin-bottom:6px;}
+
+/* loading / error */
+.center-state{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:320px;gap:16px;color:var(--muted);}
+.spinner{width:36px;height:36px;border:3px solid var(--surface-3);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+.error-box{background:var(--fail-bg);border:1px solid #f5c0bc;border-radius:var(--radius);padding:20px 24px;max-width:560px;}
+.error-title{font-weight:600;color:var(--fail);margin-bottom:8px;}
+.error-msg{font-size:13.5px;color:var(--text);line-height:1.6;}
+.error-msg code{font-family:var(--font-mono);font-size:12px;background:rgba(210,59,52,.1);padding:2px 5px;border-radius:4px;}
+.config-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px 32px;max-width:540px;text-align:center;}
+.config-title{font-weight:600;font-size:18px;margin-bottom:10px;}
+.config-desc{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:20px;}
+.config-code{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-family:var(--font-mono);font-size:12.5px;text-align:left;word-break:break-all;color:var(--text);}
+
+.footer{text-align:center;padding:22px;color:var(--faint);font-size:12px;border-top:1px solid var(--border);}
+
+/* tweaks panel */
+.twk-panel{position:fixed;right:16px;bottom:16px;z-index:2147483646;width:280px;
+  max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+  background:rgba(250,249,247,.78);color:#29261b;
+  -webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);
+  border:.5px solid rgba(255,255,255,.6);border-radius:14px;
+  box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 12px 40px rgba(0,0,0,.18);
+  font:11.5px/1.4 ui-sans-serif,system-ui,-apple-system,sans-serif;overflow:hidden}
+.twk-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 8px 10px 14px;cursor:move;user-select:none}
+.twk-hd b{font-size:12px;font-weight:600;}
+.twk-x{appearance:none;border:0;background:transparent;color:rgba(41,38,27,.55);width:22px;height:22px;border-radius:6px;cursor:default;font-size:13px;line-height:1}
+.twk-x:hover{background:rgba(0,0,0,.06);color:#29261b}
+.twk-body{padding:2px 14px 14px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;min-height:0;scrollbar-width:thin}
+.twk-row{display:flex;flex-direction:column;gap:5px}
+.twk-lbl{display:flex;justify-content:space-between;align-items:baseline;color:rgba(41,38,27,.72)}
+.twk-lbl>span:first-child{font-weight:500}
+.twk-sect{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:rgba(41,38,27,.45);padding:10px 0 0}
+.twk-sect:first-child{padding-top:0}
+.twk-seg{position:relative;display:flex;padding:2px;border-radius:8px;background:rgba(0,0,0,.06);user-select:none}
+.twk-seg-thumb{position:absolute;top:2px;bottom:2px;border-radius:6px;background:rgba(255,255,255,.9);box-shadow:0 1px 2px rgba(0,0,0,.12);transition:left .15s,width .15s}
+.twk-seg.dragging .twk-seg-thumb{transition:none}
+.twk-seg button{appearance:none;position:relative;z-index:1;flex:1;border:0;background:transparent;color:inherit;font:inherit;font-weight:500;min-height:22px;border-radius:6px;cursor:default;padding:4px 6px;line-height:1.2;overflow-wrap:anywhere}
+.twk-chips{display:flex;gap:6px}
+.twk-chip{position:relative;appearance:none;flex:1;min-width:0;height:46px;padding:0;border:0;border-radius:6px;overflow:hidden;cursor:default;box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.06);transition:transform .12s,box-shadow .12s}
+.twk-chip:hover{transform:translateY(-1px);box-shadow:0 0 0 .5px rgba(0,0,0,.18),0 4px 10px rgba(0,0,0,.12)}
+.twk-chip[data-on="1"]{box-shadow:0 0 0 1.5px rgba(0,0,0,.85),0 2px 6px rgba(0,0,0,.15)}
+.twk-chip svg{position:absolute;top:6px;left:6px;width:13px;height:13px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+
+/* bar chart section */
+.barchart-section{margin-top:28px;}
+.subsec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+.subsec-title{font-size:15px;font-weight:600;}
+.barchart-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.bccard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+.bccard-head{display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--border);}
+.bccard-title{font-weight:600;font-size:14.5px;}
+.bccard-body{padding:14px 18px;display:flex;flex-direction:column;gap:12px;}
+.bcmode{display:flex;flex-direction:column;gap:7px;}
+.bcmode-label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;}
+.bcbar-row{display:flex;align-items:center;gap:8px;}
+.bcbar-month{font-size:11.5px;color:var(--faint);width:26px;text-align:right;flex-shrink:0;}
+.bcbar-track{flex:1;height:10px;border-radius:5px;background:var(--surface-3);overflow:hidden;}
+.bcbar-fill{height:100%;border-radius:5px;transition:width .4s;}
+.bcbar-fill-may{background:var(--border-strong);opacity:.55;}
+.bcbar-fill-up{background:var(--pass);}
+.bcbar-fill-down{background:var(--fail);}
+.bcbar-fill-flat{background:var(--faint);}
+.bcbar-val{font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;width:42px;flex-shrink:0;text-align:right;}
+.bcsep{height:1px;background:var(--border);margin:1px 0;}
+
+/* BKK vs Region */
+.bkk-section{margin-top:24px;}
+.bkk-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.bkkcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+.bkkcard-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.bkkcard-title{font-weight:600;font-size:16px;}
+.bkkcard-cnt{font-size:11.5px;color:var(--muted);background:var(--surface-2);padding:2px 9px;border-radius:20px;}
+.bkkcard-body{padding:4px 0;}
+.bkkrow{padding:13px 18px;border-bottom:1px solid var(--surface-3);}
+.bkkrow:last-child{border-bottom:none;}
+.bkkrow-label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:9px;}
+.bkkrow-data{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.bkkrow-jun{font-size:26px;font-weight:600;letter-spacing:-.02em;}
+.bkkrow-may{font-size:12.5px;}
+
+/* Trend tab */
+.trend-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px;}
+.trend-card-head{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px;}
+.trend-card-title{font-weight:600;font-size:15px;}
+.trend-chart-area{padding:16px 12px 8px;}
+.trend-legend-row{display:flex;gap:16px;}
+.trend-leg{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);}
+.trend-leg-line{display:inline-block;width:22px;height:2.5px;border-radius:2px;flex-shrink:0;}
+.trend-empty{padding:48px;text-align:center;color:var(--muted);font-size:14px;}
+
+/* Region tab */
+.region-list{display:flex;flex-direction:column;gap:10px;}
+.region-block{border-radius:var(--radius-sm);overflow:hidden;box-shadow:var(--shadow);}
+.region-row{display:flex;align-items:center;gap:16px;background:var(--surface);border:1px solid var(--border);padding:14px 18px 14px 14px;}
+.region-block .region-dcs~* , .region-row{border-radius:0;}
+.region-info{display:flex;align-items:center;gap:10px;min-width:180px;flex-wrap:wrap;flex-shrink:0;}
+.region-name{font-weight:600;font-size:15px;white-space:nowrap;}
+.region-cnt{font-size:12px;color:var(--muted);background:var(--surface-2);padding:2px 8px;border-radius:20px;white-space:nowrap;}
+.region-bar-area{flex:1;display:flex;flex-direction:column;gap:7px;min-width:0;}
+.region-metrics{display:flex;gap:20px;flex-wrap:wrap;font-size:13px;}
+.region-mode-group{display:inline-flex;align-items:center;gap:7px;}
+.region-chevron{font-size:11px;color:var(--faint);flex-shrink:0;width:16px;text-align:center;}
+.region-dcs{background:var(--surface-2);border:1px solid var(--border);border-top:none;}
+.region-dc-row{display:flex;align-items:center;gap:12px;padding:10px 18px 10px 40px;border-bottom:1px solid var(--border);font-size:13px;}
+.region-dc-row:last-child{border-bottom:none;}
+.region-dc-row.row-down{box-shadow:inset 3px 0 0 var(--fail);}
+.region-dc-row.row-up{box-shadow:inset 3px 0 0 var(--pass);}
+.region-dc-no{font-family:var(--font-mono);font-size:12px;color:var(--faint);width:20px;text-align:center;flex-shrink:0;}
+.region-dc-name{min-width:140px;font-weight:500;}
+.region-dc-vals{display:flex;align-items:center;gap:7px;flex-wrap:wrap;flex:1;}
+
+/* Top 5 Best */
+.top5-section{margin-top:28px;}
+.top5-list{display:flex;flex-direction:column;gap:8px;}
+.top5row{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 18px;box-shadow:var(--shadow);}
+.top5-medal{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.medal-1{background:#fef9c3;}
+.medal-2{background:#f1f5f9;}
+.medal-3{background:#fff7ed;}
+.medal-n{background:var(--surface-3);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;color:var(--faint);}
+.top5-dc-name{min-width:150px;font-weight:600;font-size:14px;}
+.top5-bar-area{flex:1;display:flex;flex-direction:column;gap:7px;min-width:0;}
+.top5-metrics{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+.top5-jun{font-size:20px;font-weight:600;letter-spacing:-.02em;}
+.top5-exlab{font-size:12px;color:var(--muted);}
+
+/* responsive */
+@media (max-width:900px){
+  .kpi-grid{grid-template-columns:1fr;}
+  .split-grid{grid-template-columns:1fr;}
+  .stat-strip{grid-template-columns:repeat(2,1fr);}
+  .ovrow{grid-template-columns:1fr;gap:14px;}
+  .ovrow-metrics{gap:24px;}
+  .barchart-grid{grid-template-columns:1fr;}
+  .bkk-grid{grid-template-columns:1fr;}
+}
+@media (max-width:760px){
+  .region-info{min-width:0;}
+  .region-row{flex-wrap:wrap;gap:10px;position:relative;padding-right:32px;}
+  .region-info{width:100%;}
+  .region-bar-area{width:100%;}
+  .region-chevron{position:absolute;top:14px;right:14px;}
+  .region-dc-row{padding-left:16px;flex-wrap:wrap;}
+  .region-dc-vals{flex-wrap:wrap;gap:5px;}
+  .dc-table-wrap{display:none;}
+  .dc-cards{display:flex;}
+  .brand-sub{display:none;}
+  .period-label{display:none;}
+  .period-val{font-size:13px;}
+  .tabs{overflow-x:auto;}
+  .matrixwrap{overflow-x:auto;}
+  .ovrow-metrics{grid-template-columns:1fr;gap:18px;}
+  .ovrow-div{height:1px;}
+  .last-updated{display:none;}
+}
+@media (max-width:480px){
+  .stat-strip{grid-template-columns:1fr 1fr;}
+  .rank-dc{min-width:120px;}
+  .rankrow{flex-wrap:wrap;}
+  .rank-bar-wrap{order:3;width:100%;flex-basis:100%;}
+  .refresh-btn span{display:none;}
+}
 </style>
-<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 </head>
 <body>
 <div id="root"></div>
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     data-live.js — fetches Google Sheets CSV and builds window.DCDATA
-     ═══════════════════════════════════════════════════════════════════════════ -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     CONFIG — แก้ไข SHEET_URL เป็น URL ของ Google Sheets จริง
+     ตัวอย่าง: https://docs.google.com/spreadsheets/d/1ABC.../edit
+     ═══════════════════════════════════════════════════════════════ -->
 <script>
-(function () {
-
-  const THAI_MONTHS = [
-    'ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.',
-    'ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.',
-  ];
-
-  function parseThaiDate(str) {
-    const m = str && str.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-    if (!m) return null;
-    return new Date(parseInt(m[3]) - 543, parseInt(m[2]) - 1, parseInt(m[1]));
-  }
-
-  function billAgeToday(jsDate) {
-    if (!jsDate) return 0;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return Math.max(0, Math.floor((today - jsDate) / 86400000));
-  }
-
-  function parseCSV(text) {
-    const clean = text.replace(/^﻿/, '');
-    const lines = clean.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
-    return lines.map((line) => {
-      const cells = []; let i = 0;
-      while (i <= line.length) {
-        if (line[i] === '"') {
-          let v = ''; i++;
-          while (i < line.length) {
-            if (line[i] === '"' && line[i + 1] === '"') { v += '"'; i += 2; }
-            else if (line[i] === '"') { i++; break; }
-            else v += line[i++];
-          }
-          cells.push(v);
-          if (line[i] === ',') i++;
-        } else {
-          const s = i;
-          while (i < line.length && line[i] !== ',') i++;
-          cells.push(line.slice(s, i));
-          if (i < line.length) i++;
-          else break;
-        }
-      }
-      return cells;
-    }).filter((r) => r.some((c) => c.trim()));
-  }
-
-  const STATUSES = [
-    { key: 's031',  code: '031',      label: 'สินค้าถึง DC ปลายทาง (รอกระจาย)',       short: 'รอกระจาย',              color: '#8c98a8' },
-    { key: 's033',  code: '033',      label: 'สินค้าถึง DC ปลายทาง (ลูกค้ารับเอง)',   short: 'ลูกค้ารับเอง',          color: '#3f7fd1' },
-    { key: 'f1',    code: '05101031', label: 'สินค้ารอกระจาย (ส่งไม่ได้ครั้งที่ 1)',  short: 'ส่งไม่ได้ · ครั้งที่ 1',  color: '#e0a93f' },
-    { key: 'f2',    code: '05102031', label: 'สินค้ารอกระจาย (ส่งไม่ได้ครั้งที่ 2)',  short: 'ส่งไม่ได้ · ครั้งที่ 2',  color: '#d97a2b' },
-    { key: 'f3',    code: '05103031', label: 'สินค้ารอกระจาย (ส่งไม่ได้ครั้งที่ 3)',  short: 'ส่งไม่ได้ · ครั้งที่ 3',  color: '#c5432f' },
-    { key: 'clear', code: 'CLEAR',    label: 'รับบิลเข้าเคลียร์',                      short: 'เคลียร์ (มีปัญหา)',      color: '#a259d8' },
-  ];
-  const statusByCode = {};
-  STATUSES.forEach((s) => { statusByCode[s.code] = s; });
-
-  function buildDCDATA(csvText) {
-    const rows = parseCSV(csvText);
-    if (rows.length < 2) throw new Error('ไม่พบข้อมูลในชีต (น้อยกว่า 2 แถว)');
-
-    const header = rows[0].map((h) => h.trim().replace(/ /g, ' '));
-    const col = (name, fallback) => {
-      let i = header.findIndex((h) => h === name);
-      if (i === -1) i = header.findIndex((h) => h.includes(name) || name.includes(h));
-      return i !== -1 ? i : fallback;
-    };
-    const C_DATE     = col('วันที่บิล',    2);
-    const C_DC_DEST  = col('DC ปลายทาง',  17);
-    const C_STATUS   = col('สถานะบิล',    19);
-    const C_BILLTYPE = col('ประเภทบิล',   24);
-
-    const dcMap  = {};
-    const dateSet = new Set();
-    let grandGen = 0, grandCold = 0;
-
-    for (let i = 1; i < rows.length; i++) {
-      const row  = rows[i];
-      const dc   = (row[C_DC_DEST]  || '').trim();
-      const date = (row[C_DATE]     || '').trim();
-      const type = (row[C_BILLTYPE] || '').trim();
-      const stat = (row[C_STATUS]   || '').trim();
-      if (!dc || !date) continue;
-
-      const isCold = type.includes('Coldchain');
-      dateSet.add(date);
-
-      if (!dcMap[dc]) dcMap[dc] = { cells: {}, st: {} };
-      if (!dcMap[dc].cells[date]) dcMap[dc].cells[date] = { gen: 0, cold: 0 };
-      if (isCold) { dcMap[dc].cells[date].cold++; grandCold++; }
-      else        { dcMap[dc].cells[date].gen++;  grandGen++;  }
-
-      const sk = (statusByCode[stat.trim()] || {}).key || 'other';
-      dcMap[dc].st[sk] = (dcMap[dc].st[sk] || 0) + 1;
-    }
-
-    if (!dateSet.size) throw new Error('ไม่พบคอลัมน์ "วันที่บิล" หรือข้อมูลว่างเปล่า');
-
-    const DATES = [...dateSet]
-      .map((raw) => {
-        const d = parseThaiDate(raw);
-        return {
-          key:   raw,
-          day:   d ? String(d.getDate()).padStart(2, '0') : raw,
-          month: d ? THAI_MONTHS[d.getMonth()] : '',
-          age:   billAgeToday(d),
-          ts:    d ? d.getTime() : 0,
-        };
-      })
-      .sort((a, b) => a.ts - b.ts);
-
-    const matrix = Object.entries(dcMap).map(([name, dc]) => {
-      let totGen = 0, totCold = 0;
-      const cells = DATES.map(({ key }) => {
-        const c = dc.cells[key] || { gen: 0, cold: 0 };
-        totGen += c.gen; totCold += c.cold;
-        return { gen: c.gen, cold: c.cold, total: c.gen + c.cold };
-      });
-      const code = (name.match(/^(\d+)/) || ['', name])[1] || name;
-      return { code, name, region: '', cells, totGen, totCold, tot: totGen + totCold, st: dc.st };
-    })
-      .filter((r) => r.tot > 0)
-      .sort((a, b) => b.tot - a.tot);
-
-    const colTot = DATES.map((_, ci) => matrix.reduce(
-      (a, row) => ({ gen: a.gen + row.cells[ci].gen, cold: a.cold + row.cells[ci].cold, total: a.total + row.cells[ci].total }),
-      { gen: 0, cold: 0, total: 0 },
-    ));
-    const grand = matrix.reduce(
-      (a, row) => ({ gen: a.gen + row.totGen, cold: a.cold + row.totCold, total: a.total + row.tot }),
-      { gen: 0, cold: 0, total: 0 },
-    );
-
-    const stTot = {};
-    STATUSES.forEach((s) => { stTot[s.key] = matrix.reduce((a, d) => a + (d.st[s.key] || 0), 0); });
-    const coldFrac = grand.total ? grand.cold / grand.total : 0;
-    const curGen = {}, curCold = {};
-    STATUSES.forEach((s) => {
-      const c = Math.round((stTot[s.key] || 0) * coldFrac);
-      curCold[s.key] = c;
-      curGen[s.key]  = (stTot[s.key] || 0) - c;
-    });
-
-    const SYSTEM = {
-      baseline: 0, cleared: 0, remaining: 0,
-      curTotal:     grand.total,
-      curGenTotal:  grand.gen,
-      curColdTotal: grand.cold,
-      cur: stTot, curGen, curCold,
-      dcCount: matrix.length, sampleCount: matrix.length,
-      byType: {
-        all:  { baseline: 0, cleared: 0, remaining: 0, st: {} },
-        gen:  { baseline: 0, cleared: 0, remaining: 0, st: {} },
-        cold: { baseline: 0, cleared: 0, remaining: 0, st: {} },
-      },
-    };
-
-    return { STATUSES, dcs: [], SYSTEM, DATES, matrix, colTot, grand, currentItems: [] };
-  }
-
-  window.loadLiveData = async function (csvUrl) {
-    const resp = await fetch(csvUrl);
-    if (!resp.ok) {
-      const hints = resp.status === 403
-        ? ' — ชีตยังไม่ได้ Publish to web (ดูคำแนะนำในหน้า Setup)'
-        : '';
-      throw new Error(`HTTP ${resp.status}${hints}`);
-    }
-    return buildDCDATA(await resp.text());
-  };
-
-  window._buildDCDATAfromCSV = buildDCDATA;
-
-})();
+window.SHEET_URL = "https://docs.google.com/spreadsheets/d/18UQ_NySqyjEw3jaJxFJ2UHsPL2MUL_8XVfaIITgPU5M/edit?usp=sharing";
+// ↑ วาง URL ของ Google Sheets ที่แชร์แบบ "Anyone with the link can view" ที่นี่
 </script>
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     shared.jsx — design system primitives
-     ═══════════════════════════════════════════════════════════════════════════ -->
 <script type="text/babel">
-if (typeof document !== 'undefined' && !document.getElementById('bill-tokens')) {
-  const st = document.createElement('style');
-  st.id = 'bill-tokens';
-  st.textContent = `
-    .billapp{
-      --bg:#f4f6fa; --surface:#ffffff; --surface-2:#fafbfd;
-      --ink:#1e2733; --ink-2:#59626f; --ink-3:#929aa7;
-      --line:#e6eaf1; --line-2:#eef1f6;
-      --blue:#1f5fbf; --blue-deep:#163f7c; --blue-soft:#eaf1fb; --blue-edge:#d6e2f5;
-      --green:#1f8a5b; --green-soft:#e6f3ec;
-      --red:#c5432f; --red-soft:#fbeae5;
-      font-family:'IBM Plex Sans Thai','IBM Plex Sans',system-ui,sans-serif;
-      color:var(--ink);
-      -webkit-font-smoothing:antialiased;
-      text-rendering:optimizeLegibility;
-    }
-    .billapp *{box-sizing:border-box;}
-    .num{font-family:'IBM Plex Mono',ui-monospace,monospace;font-feature-settings:'tnum' 1;letter-spacing:-.01em;}
-    .billapp ::selection{background:#cfe0f8;}
-  `;
-  document.head.appendChild(st);
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const fmt1 = (x) => (x == null || isNaN(x) ? "–" : x.toFixed(1));
+const fmtDelta = (x) => `${x > 0 ? "+" : x < 0 ? "−" : "±"}${Math.abs(x).toFixed(1)}`;
+
+function trendOf(may, jun) {
+  const d = jun - may;
+  return d > 0.05 ? "up" : d < -0.05 ? "down" : "flat";
+}
+const URG = { down: { key: "critical", label: "เร่งด่วน" }, flat: { key: "watch", label: "เฝ้าระวัง" }, up: { key: "ok", label: "กำลังฟื้นตัว" } };
+
+function Delta({ may, jun, size = "md" }) {
+  const d = jun - may;
+  const dir = d > 0.04 ? "up" : d < -0.04 ? "down" : "flat";
+  const arrow = dir === "up" ? "▲" : dir === "down" ? "▼" : "—";
+  return <span className={`delta delta-${dir} delta-${size}`}><span className="delta-arrow">{arrow}</span><span>{fmtDelta(d)}</span></span>;
 }
 
-const C = {
-  bg: '#f4f6fa', surface: '#ffffff', surface2: '#fafbfd',
-  ink: '#1e2733', ink2: '#59626f', ink3: '#929aa7',
-  line: '#e6eaf1', line2: '#eef1f6',
-  blue: '#1f5fbf', blueDeep: '#163f7c', blueSoft: '#eaf1fb', blueEdge: '#d6e2f5',
-  green: '#1f8a5b', greenSoft: '#e6f3ec',
-  red: '#c5432f', redSoft: '#fbeae5',
+function PrevRef({ may }) {
+  return <div className="prevref muted">พ.ค. <span className="tnum">{fmt1(may)}%</span></div>;
+}
+
+function CatIcon({ cat }) {
+  if (cat === "cold") return <span className="catmark catmark-cold">❄</span>;
+  if (cat === "general") return <span className="catmark catmark-general">◧</span>;
+  return <span className="catmark catmark-total">◆</span>;
+}
+
+// ─── Google Sheets loader ─────────────────────────────────────────────────────
+
+function extractSheetId(url) {
+  const m = String(url).match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  return m ? m[1] : null;
+}
+
+function parseCSV(text) {
+  const rows = [];
+  let cur = '';
+  let inQ = false;
+  const chars = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  for (let i = 0; i < chars.length; i++) {
+    const c = chars[i];
+    if (c === '"') {
+      if (inQ && chars[i + 1] === '"') { cur += '"'; i++; }
+      else inQ = !inQ;
+    } else if (c === '\n' && !inQ) {
+      rows.push(splitCSVRow(cur));
+      cur = '';
+    } else {
+      cur += c;
+    }
+  }
+  if (cur) rows.push(splitCSVRow(cur));
+  return rows;
+}
+
+function splitCSVRow(line) {
+  const cells = [];
+  let cur = '';
+  let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') {
+      if (inQ && line[i + 1] === '"') { cur += '"'; i++; }
+      else inQ = !inQ;
+    } else if (c === ',' && !inQ) {
+      cells.push(cur.trim());
+      cur = '';
+    } else {
+      cur += c;
+    }
+  }
+  cells.push(cur.trim());
+  return cells;
+}
+
+function toPercent(s) {
+  const n = parseFloat(String(s).replace(/[,\s%]/g, ''));
+  if (isNaN(n)) return null;
+  // Values can be 0-1 decimals or already percentages (>1)
+  const pct = n <= 1 ? n * 100 : n;
+  return Math.round(pct * 10) / 10;
+}
+
+function parseSheetRows(csvText) {
+  const rows = parseCSV(csvText);
+
+  // Find Grand Total in summary section (rows 3–6)
+  let grandTotal = null;
+  for (let i = 2; i < Math.min(8, rows.length); i++) {
+    if (rows[i] && rows[i][1] && rows[i][1].includes('Grand Total')) {
+      grandTotal = {
+        all: { may: toPercent(rows[i][2]), jun: toPercent(rows[i][4]) },
+        exCust: { may: toPercent(rows[i][3]), jun: toPercent(rows[i][5]) },
+      };
+      break;
+    }
+  }
+
+  // Find DC section start (after row with "DC" in col 1)
+  let dcStart = -1;
+  for (let i = 0; i < rows.length; i++) {
+    const cell = rows[i][1];
+    if (cell === 'DC' || cell === '"DC"') { dcStart = i + 1; break; }
+  }
+
+  const dcs = [];
+  if (dcStart > 0) {
+    for (let i = dcStart; i < rows.length; i++) {
+      const r = rows[i];
+      const name = r[1];
+      if (!name || name.includes('Grand Total')) continue;
+      const mayAll = toPercent(r[2]);
+      const mayEx = toPercent(r[3]);
+      const junAll = toPercent(r[4]);
+      const junEx = toPercent(r[5]);
+      if (junAll == null) continue;
+      dcs.push({ name, all: { may: mayAll, jun: junAll }, exCust: { may: mayEx ?? mayAll, jun: junEx ?? junAll } });
+    }
+  }
+
+  return { grandTotal, dcs };
+}
+
+async function fetchSheet(sheetId, sheetName) {
+  const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status} — ${sheetName}`);
+  return res.text();
+}
+
+// Province → region mapping
+const PROVINCE_REGION = {
+  'CDC บางนา':'bkk','DC รังสิต':'bkk','DC พุทธมณฑลสาย 3':'bkk',
+  'DC นครปฐม':'west','DC สมุทรสาคร':'west','DC สระบุรี':'central',
+  'DC ราชบุรี':'west','DC ลพบุรี':'central','DC อยุธยา':'central',
+  'DC ชะอำ':'west','DC ชัยนาท':'north','DC สุพรรณบุรี':'central',
+  'DC พัทยา':'east','DC ชลบุรี':'east',
+  'DC ระยอง':'east','DC ฉะเชิงเทรา':'east','DC ปราจีนบุรี':'east',
+  'DC จันทบุรี':'east','DC ปากช่อง':'east',
+  'DC กาญจนบุรี':'west',
+  'DC เชียงใหม่':'north','DC เชียงราย':'north','DC ลำพูน':'north',
+  'DC ลำปาง':'north','DC พิษณุโลก':'north','DC นครสวรรค์':'north',
+  'DC สุโขทัย':'north','DC อุตรดิตถ์':'north','DC ตาก':'north',
+  'DC แพร่':'north','DC น่าน':'north','DC พะเยา':'north',
+  'DC แม่ฮ่องสอน':'north','DC ฝาง':'north','DC แม่สาย':'north',
+  'DC พิจิตร':'north','DC เพชรบูรณ์':'north',
+  'DC โคราช':'northeast','DC ขอนแก่น':'northeast','DC อุดรธานี':'northeast',
+  'DC อุบลราชธานี':'northeast','DC บุรีรัมย์':'northeast','DC ร้อยเอ็ด':'northeast',
+  'DC สุรินทร์':'northeast','DC ศรีสะเกษ':'northeast','DC ชัยภูมิ':'northeast',
+  'DC สกลนคร':'northeast','DC หนองคาย':'northeast','DC ยโสธร':'northeast',
+  'DC กาฬสินธุ์':'northeast','DC มุกดาหาร':'northeast','DC นครพนม':'northeast',
+  'DC หาดใหญ่':'south','DC สุราษฎร์':'south','DC ภูเก็ต':'south',
+  'DC นครศรีธรรมราช':'south','DC กระบี่':'south','DC ชุมพร':'south',
+  'DC พัทลุง':'south','DC ทุ่งสง':'south','DC พังงา':'south',
 };
 
-const fmt = (n) => Math.round(n).toLocaleString('en-US');
-const pct = (part, whole) => (whole ? Math.round((part / whole) * 100) : 0);
+const REGIONS_LIST = [
+  { key: 'bkk', th: 'กรุงเทพและปริมณฑล' },
+  { key: 'central', th: 'ภาคกลาง' },
+  { key: 'north', th: 'ภาคเหนือ' },
+  { key: 'northeast', th: 'ภาคอีสาน' },
+  { key: 'east', th: 'ภาคตะวันออก' },
+  { key: 'west', th: 'ภาคตะวันตก' },
+  { key: 'south', th: 'ภาคใต้' },
+];
 
-function DeltaPill({ value, size = 'md', showPct, base }) {
-  const good = value <= 0;
-  const col = value === 0 ? C.ink3 : good ? C.green : C.red;
-  const bg = value === 0 ? C.line2 : good ? C.greenSoft : C.redSoft;
-  const arrow = value === 0 ? '–' : good ? '▼' : '▲';
-  const p = showPct && base ? ` ${Math.abs(pct(value, base))}%` : '';
-  const pad = size === 'sm' ? '2px 7px' : '3px 9px';
-  const fs = size === 'sm' ? 12 : 13;
-  return (
-    <span className="num" style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4, padding: pad,
-      borderRadius: 999, background: bg, color: col, fontSize: fs, fontWeight: 600,
-      lineHeight: 1, whiteSpace: 'nowrap',
-    }}>
-      <span style={{ fontSize: fs - 3 }}>{arrow}</span>
-      {value > 0 ? '+' : value < 0 ? '−' : ''}{fmt(Math.abs(value))}{p}
-    </span>
-  );
-}
+async function loadSLAData(sheetId) {
+  const [abCSV, ccCSV, totCSV] = await Promise.all([
+    fetchSheet(sheetId, 'AB'),
+    fetchSheet(sheetId, 'CC'),
+    fetchSheet(sheetId, 'AB+CC'),
+  ]);
 
-function CompareBars({ baseline, current, max, height = 7, gap = 6, labels = true }) {
-  const m = max || Math.max(baseline, current, 1);
-  const row = (label, val, color, track) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      {labels && <span style={{ width: 30, fontSize: 11, color: C.ink3, flex: '0 0 auto' }}>{label}</span>}
-      <div style={{ flex: 1, height, background: track, borderRadius: 99 }}>
-        <div style={{ width: `${(val / m) * 100}%`, height: '100%', background: color, borderRadius: 99 }} />
-      </div>
-      <span className="num" style={{ width: 42, textAlign: 'right', fontSize: 12, color: C.ink2, flex: '0 0 auto' }}>{fmt(val)}</span>
-    </div>
-  );
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap }}>
-      {row('ตั้งต้น', baseline, C.ink3, C.line2)}
-      {row('ใหม่', current, C.blue, C.blueSoft)}
-    </div>
-  );
-}
+  const ab = parseSheetRows(abCSV);
+  const cc = parseSheetRows(ccCSV);
+  const tot = parseSheetRows(totCSV);
 
-function DCBadge({ code, tone = 'blue' }) {
-  const map = {
-    blue: [C.blueSoft, C.blueDeep, C.blueEdge],
-    plain: [C.surface2, C.ink2, C.line],
+  // Build DC map keyed by name
+  const dcMap = {};
+  const ensureDC = (name) => { if (!dcMap[name]) dcMap[name] = { name }; };
+  ab.dcs.forEach((d) => { ensureDC(d.name); dcMap[d.name].general = { all: d.all, exCust: d.exCust }; });
+  cc.dcs.forEach((d) => { ensureDC(d.name); dcMap[d.name].cold = { all: d.all, exCust: d.exCust }; });
+  tot.dcs.forEach((d) => { ensureDC(d.name); dcMap[d.name].total = { all: d.all, exCust: d.exCust }; });
+
+  const dcs = Object.values(dcMap)
+    .filter((d) => d.total)
+    .map((d, i) => ({
+      code: `DC-${String(i + 1).padStart(3, '0')}`,
+      name: d.name,
+      region: PROVINCE_REGION[d.name] || 'other',
+      regionTh: REGIONS_LIST.find((r) => r.key === (PROVINCE_REGION[d.name] || 'other'))?.th || 'อื่นๆ',
+      total: d.total,
+      general: d.general || d.total,
+      cold: d.cold || d.total,
+    }));
+
+  const overview = {
+    total: tot.grandTotal,
+    general: ab.grandTotal,
+    cold: cc.grandTotal,
   };
-  const [bg, fg, bd] = map[tone] || map.blue;
-  return (
-    <span className="num" style={{
-      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      minWidth: 44, height: 24, padding: '0 8px', borderRadius: 6,
-      background: bg, color: fg, border: `1px solid ${bd}`,
-      fontSize: 12, fontWeight: 600, letterSpacing: '.02em',
-    }}>{code}</span>
-  );
+
+  // Load trend sheets (optional — fail gracefully if missing)
+  let trendData = null;
+  try {
+    const [tAbCSV, tCcCSV, tTotCSV] = await Promise.all([
+      fetchSheet(sheetId, 'Trend_AB').catch(() => null),
+      fetchSheet(sheetId, 'Trend_CC').catch(() => null),
+      fetchSheet(sheetId, 'Trend_AB+CC').catch(() => null),
+    ]);
+    if (tAbCSV || tCcCSV || tTotCSV) {
+      trendData = {
+        general: tAbCSV ? parseTrendSheet(tAbCSV) : null,
+        cold:    tCcCSV ? parseTrendSheet(tCcCSV) : null,
+        total:   tTotCSV ? parseTrendSheet(tTotCSV) : null,
+      };
+    }
+  } catch (_) {}
+
+  return { dcs, overview, trendData, loadedAt: new Date(), dataDate: readDataDate(totCSV) };
 }
 
-function SnapChip({ label, date, tone }) {
-  const isNew = tone === 'new';
-  return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', gap: 1, padding: '6px 12px',
-      borderRadius: 8, background: isNew ? C.blueSoft : C.surface2,
-      border: `1px solid ${isNew ? C.blueEdge : C.line}`,
-    }}>
-      <span style={{ fontSize: 10.5, color: isNew ? C.blue : C.ink3, fontWeight: 600, letterSpacing: '.02em' }}>{label}</span>
-      <span className="num" style={{ fontSize: 13, color: C.ink, fontWeight: 600 }}>{date}</span>
-    </div>
-  );
+function parseTrendSheet(csvText) {
+  const rows = parseCSV(csvText);
+  if (!rows.length) return { grandTotal: null, dcs: [], months: [] };
+
+  const header = rows[0];
+  const months = [];
+  const monthCols = {};
+
+  for (let i = 1; i < header.length; i++) {
+    const cell = header[i];
+    if (!cell) continue;
+    const sep = cell.lastIndexOf('_');
+    if (sep < 0) continue;
+    const month = cell.slice(0, sep);
+    const type = cell.slice(sep + 1);
+    if (type !== 'all' && type !== 'ex') continue;
+    if (!monthCols[month]) { monthCols[month] = {}; months.push(month); }
+    monthCols[month][type] = i;
+  }
+
+  if (!months.length) return { grandTotal: null, dcs: [], months: [] };
+
+  let grandTotal = null;
+  const dcs = [];
+
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    const name = (r[0] || '').trim();
+    if (!name) continue;
+    const monthData = {};
+    for (const m of months) {
+      const all = monthCols[m].all != null ? toPercent(r[monthCols[m].all]) : null;
+      const ex  = monthCols[m].ex  != null ? toPercent(r[monthCols[m].ex])  : null;
+      if (all != null) monthData[m] = { all, ex: ex ?? all };
+    }
+    if (!Object.keys(monthData).length) continue;
+    const entry = { name, months: monthData };
+    if (name.includes('Grand Total')) grandTotal = entry;
+    else dcs.push(entry);
+  }
+
+  return { grandTotal, dcs, months };
 }
 
-function SyncChip() {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: C.ink3 }}>
-      <span style={{ width: 7, height: 7, borderRadius: 99, background: C.green, boxShadow: `0 0 0 3px ${C.greenSoft}` }} />
-      ซิงก์จาก Google Sheet · 09 มิ.ย. 08:40
-    </div>
-  );
+function readDataDate(csvText) {
+  const rows = parseCSV(csvText);
+  if (!rows.length) return null;
+  // Scan first 3 rows for a cell containing Thai date keywords
+  for (let i = 0; i < Math.min(3, rows.length); i++) {
+    for (let j = 0; j < rows[i].length; j++) {
+      const cell = rows[i][j];
+      if (cell && (cell.includes('ณ') || cell.includes('มิ.ย') || cell.includes('มิถุนายน') || cell.includes('as of') || cell.includes('As of'))) {
+        return cell.trim();
+      }
+    }
+  }
+  return null;
 }
 
-Object.assign(window, { C, fmt, pct, DeltaPill, CompareBars, DCBadge, SnapChip, SyncChip });
-</script>
+// ─── Tweaks panel ─────────────────────────────────────────────────────────────
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     directionB2.jsx — main app components
-     ═══════════════════════════════════════════════════════════════════════════ -->
-<script type="text/babel">
-const { useState: useStateB2 } = React;
-
-const clrPct = (d) => Math.round(d.cleared / d.baseline * 100);
-const failOf = (obj) => (obj.f1 || 0) + (obj.f2 || 0) + (obj.f3 || 0);
-
-function StatusBar({ st, total, height = 9, radius = 5 }) {
-  const STATUSES = window.DCDATA.STATUSES;
-  return (
-    <div style={{ display: 'flex', width: '100%', height, borderRadius: radius, overflow: 'hidden', background: C.line2 }}>
-      {STATUSES.map((s) => {
-        const v = st[s.key] || 0;
-        if (!v) return null;
-        return <div key={s.key} title={`${s.short} · ${v}`} style={{ width: `${v / total * 100}%`, background: s.color }} />;
-      })}
-    </div>
-  );
+function useTweaks(defaults) {
+  const [values, setValues] = React.useState(defaults);
+  const setTweak = React.useCallback((key, val) => {
+    setValues((prev) => ({ ...prev, [key]: val }));
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { [key]: val } }, '*');
+  }, []);
+  return [values, setTweak];
 }
 
-function StatusLegend({ columns = 1, valueOf }) {
-  const STATUSES = window.DCDATA.STATUSES;
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: columns > 1 ? '8px 22px' : 8 }}>
-      {STATUSES.map((s) =>
-        <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <span style={{ width: 9, height: 9, borderRadius: 3, background: s.color, flex: '0 0 auto' }} />
-          <span style={{ fontSize: 12.5, color: C.ink2, flex: 1, minWidth: 0 }}>{s.short}</span>
-          <span className="num" style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>{fmt(valueOf(s))}</span>
-        </div>
-      )}
-    </div>
-  );
-}
+function TweaksPanel({ title = 'Tweaks', children }) {
+  const [open, setOpen] = React.useState(false);
+  const dragRef = React.useRef(null);
+  const offsetRef = React.useRef({ x: 16, y: 16 });
 
-function ThB2({ children, align = 'right', w }) {
-  return <th style={{ textAlign: align, padding: '10px 16px', fontSize: 11.5, fontWeight: 600, color: C.ink3, whiteSpace: 'nowrap', width: w }}>{children}</th>;
-}
+  const clamp = React.useCallback(() => {
+    const p = dragRef.current; if (!p) return;
+    const PAD = 16;
+    offsetRef.current = {
+      x: Math.min(Math.max(PAD, window.innerWidth - p.offsetWidth - PAD), Math.max(PAD, offsetRef.current.x)),
+      y: Math.min(Math.max(PAD, window.innerHeight - p.offsetHeight - PAD), Math.max(PAD, offsetRef.current.y)),
+    };
+    p.style.right = offsetRef.current.x + 'px';
+    p.style.bottom = offsetRef.current.y + 'px';
+  }, []);
 
-function TdNum({ children, color, bold, sub }) {
-  return (
-    <td style={{ textAlign: 'right', padding: '11px 16px', whiteSpace: 'nowrap' }}>
-      <div className="num" style={{ fontSize: 14, color: color || C.ink, fontWeight: bold ? 600 : 500 }}>{children}</div>
-      {sub && <div className="num" style={{ fontSize: 11, color: C.ink3, marginTop: 1 }}>{sub}</div>}
-    </td>
-  );
-}
+  React.useEffect(() => {
+    if (!open) return;
+    clamp();
+    const ro = new ResizeObserver(clamp);
+    ro.observe(document.documentElement);
+    return () => ro.disconnect();
+  }, [open, clamp]);
 
-function StatusDetail({ d, stObj, total, title, showCleared, compact }) {
-  const STATUSES = window.DCDATA.STATUSES;
-  const failTotal = failOf(stObj);
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      if (e?.data?.type === '__activate_edit_mode') setOpen(true);
+      if (e?.data?.type === '__deactivate_edit_mode') setOpen(false);
+    };
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  const dismiss = () => { setOpen(false); window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*'); };
+
+  const onDragStart = (e) => {
+    const p = dragRef.current; if (!p) return;
+    const r = p.getBoundingClientRect();
+    const startR = window.innerWidth - r.right, startB = window.innerHeight - r.bottom;
+    const sx = e.clientX, sy = e.clientY;
+    const move = (ev) => { offsetRef.current = { x: startR - (ev.clientX - sx), y: startB - (ev.clientY - sy) }; clamp(); };
+    const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+
+  if (!open) return null;
   return (
-    <div style={{ background: 'linear-gradient(180deg,#f7faff,#fff)', borderBottom: `2px solid ${C.blueEdge}`, padding: compact ? '12px 16px 14px' : '16px 24px 18px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 13.5, fontWeight: 700 }}>{title} · {d.code} {d.name}</span>
-        <span className="num" style={{ fontSize: 12, fontWeight: 700, color: C.blue, background: C.blueSoft, borderRadius: 99, padding: '2px 9px' }}>{fmt(total)} บิล</span>
-        {showCleared && <span style={{ fontSize: 12, color: C.ink3 }}>· เคลียร์แล้ว {fmt(d.cleared)} ({clrPct(d)}%)</span>}
-        {failTotal > 0 && <span style={{ fontSize: 12, fontWeight: 600, color: C.red, background: C.redSoft, borderRadius: 99, padding: '2px 9px' }}>ส่งไม่ได้ {fmt(failTotal)} บิล</span>}
+    <div ref={dragRef} className="twk-panel" style={{ right: offsetRef.current.x, bottom: offsetRef.current.y }}>
+      <div className="twk-hd" onMouseDown={onDragStart}>
+        <b>{title}</b>
+        <button className="twk-x" onMouseDown={(e) => e.stopPropagation()} onClick={dismiss}>✕</button>
       </div>
-      <div style={{ marginBottom: 14 }}><StatusBar st={stObj} total={total} height={12} /></div>
-      <div style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 10, overflow: 'hidden' }}>
-        {STATUSES.map((s, i) => {
-          const v = stObj[s.key] || 0;
-          const p = Math.round(v / total * 100);
+      <div className="twk-body">{children}</div>
+    </div>
+  );
+}
+
+function TweakSection({ label }) { return <div className="twk-sect">{label}</div>; }
+function TweakRow({ label, children }) { return <div className="twk-row"><div className="twk-lbl"><span>{label}</span></div>{children}</div>; }
+
+function TweakRadio({ label, value, options, onChange }) {
+  const trackRef = React.useRef(null);
+  const [dragging, setDragging] = React.useState(false);
+  const valueRef = React.useRef(value); valueRef.current = value;
+  const opts = options.map((o) => typeof o === 'object' ? o : { value: o, label: o });
+  const idx = Math.max(0, opts.findIndex((o) => o.value === value));
+  const n = opts.length;
+  const segAt = (cx) => {
+    const r = trackRef.current.getBoundingClientRect();
+    const i = Math.floor(((cx - r.left - 2) / (r.width - 4)) * n);
+    return opts[Math.max(0, Math.min(n - 1, i))].value;
+  };
+  const onPointerDown = (e) => {
+    setDragging(true);
+    const v0 = segAt(e.clientX); if (v0 !== valueRef.current) onChange(v0);
+    const move = (ev) => { if (!trackRef.current) return; const v = segAt(ev.clientX); if (v !== valueRef.current) onChange(v); };
+    const up = () => { setDragging(false); window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+  };
+  return (
+    <TweakRow label={label}>
+      <div ref={trackRef} role="radiogroup" onPointerDown={onPointerDown} className={dragging ? 'twk-seg dragging' : 'twk-seg'}>
+        <div className="twk-seg-thumb" style={{ left: `calc(2px + ${idx} * (100% - 4px) / ${n})`, width: `calc((100% - 4px) / ${n})` }} />
+        {opts.map((o) => <button key={o.value} type="button" role="radio" aria-checked={o.value === value}>{o.label}</button>)}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakColor({ label, value, options, onChange }) {
+  const key = (o) => String(JSON.stringify(o)).toLowerCase();
+  const isLight = (hex) => {
+    const h = String(hex).replace('#', '').padEnd(6, '0');
+    const n = parseInt(h.slice(0, 6), 16);
+    if (isNaN(n)) return true;
+    return ((n >> 16) & 255) * 299 + ((n >> 8) & 255) * 587 + (n & 255) * 114 > 148000;
+  };
+  return (
+    <TweakRow label={label}>
+      <div className="twk-chips">
+        {(options || []).map((o, i) => {
+          const on = key(o) === key(value);
           return (
-            <div key={s.key} style={{ display: 'grid', gridTemplateColumns: compact ? '1fr 64px' : '20px 1fr 220px 64px 56px', alignItems: 'center', gap: 12, padding: '11px 16px', borderTop: i ? `1px solid ${C.line2}` : 'none' }}>
-              {!compact && <span style={{ width: 11, height: 11, borderRadius: 3, background: s.color }} />}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {compact && <span style={{ width: 10, height: 10, borderRadius: 3, background: s.color, flex: '0 0 auto' }} />}
-                  <span style={{ fontSize: 13.5, fontWeight: 600 }}>{s.short}</span>
-                </div>
-                <span className="num" style={{ fontSize: 11, color: C.ink3 }}>{s.code}</span>
+            <button key={i} type="button" className="twk-chip" data-on={on ? '1' : '0'} style={{ background: o }} onClick={() => onChange(o)}>
+              {on && <svg viewBox="0 0 14 14" aria-hidden="true" style={{position:'absolute',top:6,left:6,width:13,height:13,filter:'drop-shadow(0 1px 1px rgba(0,0,0,.3))'}}><path d="M3 7.2 5.8 10 11 4.2" fill="none" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" stroke={isLight(o) ? 'rgba(0,0,0,.78)' : '#fff'} /></svg>}
+            </button>
+          );
+        })}
+      </div>
+    </TweakRow>
+  );
+}
+
+// ─── Overview tab ─────────────────────────────────────────────────────────────
+
+function BarChartSection({ overview }) {
+  const CATS = [
+    { key: 'total', label: 'SLA รวม' },
+    { key: 'general', label: 'สินค้าทั่วไป' },
+    { key: 'cold', label: 'Cold Chain' },
+  ];
+  const MODES = [
+    { key: 'all', label: 'ทุกสาเหตุ' },
+    { key: 'exCust', label: 'ตัดสาเหตุลูกค้า' },
+  ];
+  const allVals = CATS.flatMap(c => MODES.flatMap(m => [overview[c.key][m.key].may, overview[c.key][m.key].jun])).filter(v => v != null);
+  const minVal = allVals.length ? Math.max(0, Math.min(...allVals) - 4) : 0;
+  const pct = (v) => v == null ? 0 : Math.max(2, Math.min(100, (v - minVal) / (100 - minVal) * 100));
+
+  return (
+    <div className="barchart-section">
+      <div className="subsec-head">
+        <span className="subsec-title">เปรียบเทียบ พ.ค. → มิ.ย.</span>
+      </div>
+      <div className="barchart-grid">
+        {CATS.map(c => {
+          const d = overview[c.key];
+          return (
+            <div key={c.key} className="bccard">
+              <div className="bccard-head"><CatIcon cat={c.key} /><span className="bccard-title">{c.label}</span></div>
+              <div className="bccard-body">
+                {MODES.map((m, mi) => {
+                  const trend = trendOf(d[m.key].may, d[m.key].jun);
+                  return (
+                    <React.Fragment key={m.key}>
+                      {mi > 0 && <div className="bcsep" />}
+                      <div className="bcmode">
+                        <div className="bcmode-label">{m.label}</div>
+                        <div className="bcbar-row">
+                          <span className="bcbar-month">พ.ค.</span>
+                          <div className="bcbar-track"><div className="bcbar-fill bcbar-fill-may" style={{width: pct(d[m.key].may) + '%'}} /></div>
+                          <span className="bcbar-val tnum">{fmt1(d[m.key].may)}%</span>
+                        </div>
+                        <div className="bcbar-row">
+                          <span className="bcbar-month">มิ.ย.</span>
+                          <div className="bcbar-track"><div className={`bcbar-fill bcbar-fill-${trend}`} style={{width: pct(d[m.key].jun) + '%'}} /></div>
+                          <span className="bcbar-val tnum">{fmt1(d[m.key].jun)}%</span>
+                        </div>
+                      </div>
+                    </React.Fragment>
+                  );
+                })}
               </div>
-              {!compact &&
-                <div style={{ height: 6, background: C.line2, borderRadius: 99, overflow: 'hidden' }}>
-                  <div style={{ width: `${p}%`, height: '100%', background: s.color, borderRadius: 99 }} />
-                </div>
-              }
-              {!compact && <span className="num" style={{ textAlign: 'right', fontSize: 12.5, color: C.ink3 }}>{p}%</span>}
-              <span className="num" style={{ textAlign: 'right', fontSize: 15, fontWeight: 600, color: v ? C.ink : C.ink3 }}>{fmt(v)}</span>
             </div>
           );
         })}
@@ -410,622 +882,841 @@ function StatusDetail({ d, stObj, total, title, showCleared, compact }) {
   );
 }
 
-function TopBar({ tab }) {
+function BkkRegionSection({ dcs }) {
+  const [cat, setCat] = React.useState('total');
+
+  const groups = React.useMemo(() => {
+    const bkkDCs = dcs.filter(d => d.region === 'bkk');
+    const regDCs = dcs.filter(d => d.region !== 'bkk' && d.region !== 'other');
+    const avgMode = (list, mode) => {
+      const mayVals = list.map(d => d[cat][mode].may).filter(v => v != null);
+      const junVals = list.map(d => d[cat][mode].jun).filter(v => v != null);
+      return {
+        may: mayVals.length ? Math.round(mayVals.reduce((s, v) => s + v, 0) / mayVals.length * 10) / 10 : null,
+        jun: junVals.length ? Math.round(junVals.reduce((s, v) => s + v, 0) / junVals.length * 10) / 10 : null,
+      };
+    };
+    return {
+      bkk: { count: bkkDCs.length, label: 'กรุงเทพและปริมณฑล', all: avgMode(bkkDCs, 'all'), exCust: avgMode(bkkDCs, 'exCust') },
+      reg: { count: regDCs.length, label: 'ภูมิภาค', all: avgMode(regDCs, 'all'), exCust: avgMode(regDCs, 'exCust') },
+    };
+  }, [dcs, cat]);
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 28px', background: C.surface, borderBottom: `1px solid ${C.line}` }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{ width: 30, height: 30, borderRadius: 8, background: C.blue, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 15 }}>บ</div>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span style={{ fontSize: 15.5, fontWeight: 700 }}>สถานะบิลคงค้าง · ราย DC </span>
-          <span style={{ fontSize: 11.5, color: C.ink3 }}>{tab === 'compare' ? 'ยึดเลขที่บิลจากไฟล์ตั้งต้น · บิลที่ไม่พบในไฟล์ใหม่ = เคลียร์แล้ว' : 'บิลคงค้างทั้งหมดจากไฟล์ใหม่ (ข้อมูลล่าสุด)'}</span>
+    <div className="bkk-section">
+      <div className="subsec-head">
+        <span className="subsec-title">กรุงเทพ vs ภูมิภาค</span>
+        <Segmented value={cat} onChange={setCat} options={[
+          {key:'total',label:'รวม'},{key:'general',label:'ทั่วไป'},{key:'cold',label:'Cold Chain'}
+        ]} />
+      </div>
+      <div className="bkk-grid">
+        {['bkk', 'reg'].map(key => {
+          const g = groups[key];
+          return (
+            <div key={key} className="bkkcard">
+              <div className="bkkcard-head">
+                <span className="bkkcard-title">{g.label}</span>
+                <span className="bkkcard-cnt">{g.count} DC</span>
+              </div>
+              <div className="bkkcard-body">
+                {[{mode:'all',label:'ทุกสาเหตุ'},{mode:'exCust',label:'ตัดสาเหตุลูกค้า'}].map(m => (
+                  <div key={m.mode} className="bkkrow">
+                    <div className="bkkrow-label">{m.label}</div>
+                    <div className="bkkrow-data">
+                      <span className="tnum bkkrow-jun">{fmt1(g[m.mode].jun)}%</span>
+                      <Delta may={g[m.mode].may} jun={g[m.mode].jun} size="sm" />
+                      <span className="bkkrow-may muted">พ.ค. {fmt1(g[m.mode].may)}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function OvMetric({ label, data }) {
+  return (
+    <div className="ovmetric">
+      <div className="ovmetric-label">{label}</div>
+      <div className="ovmetric-main">
+        <span className="ovmetric-val tnum">{fmt1(data.jun)}<span className="ovmetric-pct">%</span></span>
+        <Delta may={data.may} jun={data.jun} size="md" />
+      </div>
+      <PrevRef may={data.may} />
+    </div>
+  );
+}
+
+function OverviewRow({ cat, overview }) {
+  const o = overview[cat];
+  const NAMES = { total: 'SLA รวม', general: 'สินค้าทั่วไป', cold: 'Cold Chain' };
+  return (
+    <div className="ovrow">
+      <div className="ovrow-cat"><CatIcon cat={cat} /><span className="ovrow-catname">{NAMES[cat]}</span></div>
+      <div className="ovrow-metrics">
+        <OvMetric label="ทุกสาเหตุ" data={o.all} />
+        <div className="ovrow-div" />
+        <OvMetric label="ตัดสาเหตุลูกค้า" data={o.exCust} />
+      </div>
+    </div>
+  );
+}
+
+function KpiCard({ cat, overview }) {
+  const o = overview[cat];
+  const NAMES = { total: 'SLA รวม', general: 'สินค้าทั่วไป', cold: 'Cold Chain' };
+  return (
+    <div className="kpicard">
+      <div className="kpicard-head"><CatIcon cat={cat} /><div className="kpicard-title">{NAMES[cat]}</div></div>
+      <div className="kpicard-body">
+        {['all', 'exCust'].map((mode, i) => (
+          <React.Fragment key={mode}>
+            {i > 0 && <div className="kpi-divider" />}
+            <div className="kpi-metric">
+              <div className="kpi-metric-label">{mode === 'all' ? 'ทุกสาเหตุ' : 'ตัดสาเหตุลูกค้า'}</div>
+              <div className="mblock-top"><span className="mblock-val tnum">{fmt1(o[mode].jun)}<span className="mblock-pct">%</span></span><Delta may={o[mode].may} jun={o[mode].jun} size="md" /></div>
+              <PrevRef may={o[mode].may} />
+            </div>
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SplitColumn({ mode, overview }) {
+  const NAMES = { total: 'SLA รวม', general: 'สินค้าทั่วไป', cold: 'Cold Chain' };
+  return (
+    <div className="splitcol">
+      <div className="splitcol-head"><span className="splitcol-tag">{mode === 'all' ? 'ทุกสาเหตุ' : 'ตัดสาเหตุลูกค้า'}</span></div>
+      {['total', 'general', 'cold'].map((cat) => {
+        const d = overview[cat][mode];
+        return (
+          <div className="splitrow" key={cat}>
+            <div className="splitrow-cat"><CatIcon cat={cat} /><span>{NAMES[cat]}</span></div>
+            <div className="splitrow-val"><span className="tnum">{fmt1(d.jun)}%</span><Delta may={d.may} jun={d.jun} size="sm" /></div>
+            <PrevRef may={d.may} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function MatrixTable({ overview }) {
+  const NAMES = { total: 'SLA รวม', general: 'สินค้าทั่วไป', cold: 'Cold Chain' };
+  return (
+    <div className="matrixwrap">
+      <table className="matrix">
+        <thead>
+          <tr><th className="matrix-cat">หมวด</th><th colSpan="3">ทุกสาเหตุ</th><th colSpan="3">ตัดสาเหตุลูกค้า</th></tr>
+          <tr className="matrix-sub"><th></th><th>พ.ค.</th><th>มิ.ย.</th><th>เปลี่ยนแปลง</th><th>พ.ค.</th><th>มิ.ย.</th><th>เปลี่ยนแปลง</th></tr>
+        </thead>
+        <tbody>
+          {['total', 'general', 'cold'].map((cat) => {
+            const a = overview[cat].all, e = overview[cat].exCust;
+            return (
+              <tr key={cat}>
+                <td className="matrix-cat"><CatIcon cat={cat} /><span>{NAMES[cat]}</span></td>
+                <td className="tnum muted">{fmt1(a.may)}</td><td className="tnum"><b>{fmt1(a.jun)}</b></td><td><Delta may={a.may} jun={a.jun} size="sm" /></td>
+                <td className="tnum muted matrix-gap">{fmt1(e.may)}</td><td className="tnum"><b>{fmt1(e.jun)}</b></td><td><Delta may={e.may} jun={e.jun} size="sm" /></td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function Overview({ layout, overview, dcs }) {
+  return (
+    <div>
+      <div className="section-head">
+        <div>
+          <h2 className="section-title">ภาพรวมทุกสาขา</h2>
+          <p className="section-desc">เปรียบเทียบ SLA เดือนพฤษภาคม → มิถุนายน 2569</p>
+        </div>
+        <div className="trend-legend">
+          <span className="legend-item"><span className="dot dot-up" />ดีขึ้น</span>
+          <span className="legend-item"><span className="dot dot-down" />ลดลง</span>
+          <span className="legend-item"><span className="dot dot-flat" />คงที่</span>
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        {tab === 'compare' ?
-          <React.Fragment>
-            <SnapChip label="ไฟล์ตั้งต้น" date="31 พ.ค." />
-            <span style={{ color: C.ink3 }}>→</span>
-            <SnapChip label="ไฟล์ใหม่" date="09 มิ.ย." tone="new" />
-          </React.Fragment> :
-          <SnapChip label="ข้อมูลล่าสุด" date="Live" tone="new" />
+      {layout === "rows" && <div className="ov-rows">{['total','general','cold'].map((c) => <OverviewRow key={c} cat={c} overview={overview} />)}</div>}
+      {layout === "cards" && <div className="kpi-grid">{['total','general','cold'].map((c) => <KpiCard key={c} cat={c} overview={overview} />)}</div>}
+      {layout === "split" && <div className="split-grid"><SplitColumn mode="all" overview={overview} /><SplitColumn mode="exCust" overview={overview} /></div>}
+      {layout === "matrix" && <MatrixTable overview={overview} />}
+      {dcs && dcs.length > 0 && <BkkRegionSection dcs={dcs} />}
+    </div>
+  );
+}
+
+// ─── By DC tab ────────────────────────────────────────────────────────────────
+
+function Segmented({ options, value, onChange }) {
+  return (
+    <div className="segmented">
+      {options.map((o) => <button key={o.key} className={`seg-btn ${value === o.key ? "seg-on" : ""}`} onClick={() => onChange(o.key)}>{o.label}</button>)}
+    </div>
+  );
+}
+
+function ByDC({ dcs }) {
+  const [cat, setCat] = React.useState("total");
+  const [region, setRegion] = React.useState("all");
+  const [q, setQ] = React.useState("");
+  const [sort, setSort] = React.useState({ key: "allJun", dir: "asc" });
+
+  const rows = React.useMemo(() => {
+    let list = dcs.map((dc) => {
+      const a = dc[cat].all, e = dc[cat].exCust;
+      return { dc, all: { may: a.may, jun: a.jun, trend: trendOf(a.may, a.jun) }, ex: { may: e.may, jun: e.jun } };
+    });
+    if (region !== "all") list = list.filter((r) => r.dc.region === region);
+    if (q.trim()) { const s = q.toLowerCase(); list = list.filter((r) => r.dc.name.toLowerCase().includes(s) || (r.dc.regionTh || '').includes(s)); }
+    const dir = sort.dir === "asc" ? 1 : -1;
+    list.sort((a, b) => {
+      if (sort.key === "name") return a.dc.name < b.dc.name ? -dir : dir;
+      const av = sort.key === "exJun" ? a.ex.jun : a.all.jun;
+      const bv = sort.key === "exJun" ? b.ex.jun : b.all.jun;
+      return (av - bv) * dir;
+    });
+    return list;
+  }, [cat, region, q, sort, dcs]);
+
+  const setSortKey = (key) => setSort((s) => s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" });
+  const arr = (key) => sort.key === key ? (sort.dir === "asc" ? " ↑" : " ↓") : "";
+  const counts = React.useMemo(() => { const c = {up:0,down:0,flat:0}; rows.forEach((r) => c[r.all.trend]++); return c; }, [rows]);
+
+  return (
+    <div>
+      <div className="section-head">
+        <div>
+          <h2 className="section-title">SLA ราย DC</h2>
+          <p className="section-desc">{dcs.length} ศูนย์กระจายสินค้า · แสดงทั้งทุกสาเหตุและตัดสาเหตุลูกค้า เทียบ พ.ค. → มิ.ย.</p>
+        </div>
+        <div className="trend-legend">
+          <span className="legend-item"><span className="dot dot-up" />{counts.up} ดีขึ้น</span>
+          <span className="legend-item"><span className="dot dot-down" />{counts.down} ลดลง</span>
+          <span className="legend-item"><span className="dot dot-flat" />{counts.flat} คงที่</span>
+        </div>
+      </div>
+
+      <div className="controls">
+        <div className="control-group">
+          <label className="control-label">หมวดสินค้า</label>
+          <Segmented value={cat} onChange={setCat} options={[{key:"total",label:"รวม"},{key:"general",label:"ทั่วไป"},{key:"cold",label:"Cold Chain"}]} />
+        </div>
+        <div className="control-group control-grow">
+          <label className="control-label">ค้นหา DC</label>
+          <input className="search-input" placeholder="ชื่อ DC, จังหวัด, ภูมิภาค…" value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
+        <div className="control-group">
+          <label className="control-label">ภูมิภาค</label>
+          <select className="region-select" value={region} onChange={(e) => setRegion(e.target.value)}>
+            <option value="all">ทุกภูมิภาค</option>
+            {REGIONS_LIST.map((r) => <option key={r.key} value={r.key}>{r.th}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div className="dc-table-wrap">
+        <table className="dc-table dc-table-dual">
+          <thead>
+            <tr className="dc-grouphead">
+              <th rowSpan="2" className="sortable" style={{textAlign:'left'}} onClick={() => setSortKey("name")}>DC{arr("name")}</th>
+              <th colSpan="3">ทุกสาเหตุ</th>
+              <th colSpan="3" className="grp-gap">ตัดสาเหตุลูกค้า</th>
+            </tr>
+            <tr className="dc-subhead">
+              <th className="th-num">พ.ค.</th>
+              <th className="th-num sortable" onClick={() => setSortKey("allJun")}>มิ.ย.{arr("allJun")}</th>
+              <th className="th-num">เปลี่ยนแปลง</th>
+              <th className="th-num grp-gap">พ.ค.</th>
+              <th className="th-num sortable" onClick={() => setSortKey("exJun")}>มิ.ย.{arr("exJun")}</th>
+              <th className="th-num">เปลี่ยนแปลง</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.dc.code} className={`row-${r.all.trend}`}>
+                <td className="td-name"><span className="dc-name">{r.dc.name}</span></td>
+                <td className="td-num tnum muted">{fmt1(r.all.may)}</td>
+                <td className="td-num tnum"><b>{fmt1(r.all.jun)}</b></td>
+                <td className="td-num"><Delta may={r.all.may} jun={r.all.jun} size="sm" /></td>
+                <td className="td-num tnum muted grp-gap">{fmt1(r.ex.may)}</td>
+                <td className="td-num tnum"><b>{fmt1(r.ex.jun)}</b></td>
+                <td className="td-num"><Delta may={r.ex.may} jun={r.ex.jun} size="sm" /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {rows.length === 0 && <div className="empty">ไม่พบ DC ที่ตรงกับเงื่อนไข</div>}
+      </div>
+
+      <div className="dc-cards">
+        {rows.map((r) => (
+          <div key={r.dc.code} className={`dccard dccard-${r.all.trend}`}>
+            <div className="dccard-head">{r.dc.name}</div>
+            <div className="dccard-modes">
+              <div className="modecol">
+                <span className="modecol-lab">ทุกสาเหตุ</span>
+                <div className="modecol-main"><span className="tnum modecol-jun">{fmt1(r.all.jun)}%</span><Delta may={r.all.may} jun={r.all.jun} size="sm" /></div>
+                <span className="modecol-prev muted tnum">พ.ค. {fmt1(r.all.may)}%</span>
+              </div>
+              <div className="modecol">
+                <span className="modecol-lab">ตัดสาเหตุลูกค้า</span>
+                <div className="modecol-main"><span className="tnum modecol-jun">{fmt1(r.ex.jun)}%</span><Delta may={r.ex.may} jun={r.ex.jun} size="sm" /></div>
+                <span className="modecol-prev muted tnum">พ.ค. {fmt1(r.ex.may)}%</span>
+              </div>
+            </div>
+          </div>
+        ))}
+        {rows.length === 0 && <div className="empty">ไม่พบ DC ที่ตรงกับเงื่อนไข</div>}
+      </div>
+    </div>
+  );
+}
+
+// ─── Analysis tab ─────────────────────────────────────────────────────────────
+
+function Top5Section({ dcs, cat }) {
+  const top5 = React.useMemo(() => {
+    return [...dcs]
+      .filter(dc => dc[cat] && dc[cat].all.jun != null)
+      .map(dc => ({
+        dc,
+        jun: dc[cat].all.jun,
+        may: dc[cat].all.may,
+        exJun: dc[cat].exCust.jun,
+        trend: trendOf(dc[cat].all.may, dc[cat].all.jun),
+      }))
+      .sort((a, b) => b.jun - a.jun)
+      .slice(0, 5);
+  }, [dcs, cat]);
+
+  if (!top5.length) return null;
+  const minBar = Math.min(95, ...top5.map(r => r.jun)) - 1;
+
+  return (
+    <div className="top5-section">
+      <div className="subsec-head">
+        <span className="subsec-title">5 อันดับ DC ที่ SLA ดีที่สุด</span>
+        <span className="muted" style={{fontSize:12}}>ทุกสาเหตุ มิ.ย.</span>
+      </div>
+      <div className="top5-list">
+        {top5.map((r, i) => (
+          <div key={r.dc.code} className="top5row">
+            <div className={`top5-medal medal-${i < 3 ? i + 1 : 'n'}`}>
+              {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+            </div>
+            <div className="top5-dc-name">{r.dc.name}</div>
+            <div className="top5-bar-area">
+              <div className="rank-bar-track">
+                <div className={`rank-bar-fill rank-bar-${r.trend}`} style={{width: Math.max(3, (r.jun - minBar) / (100 - minBar) * 100) + '%'}} />
+              </div>
+              <div className="top5-metrics">
+                <span className="tnum top5-jun">{fmt1(r.jun)}%</span>
+                <Delta may={r.may} jun={r.jun} size="sm" />
+                <span className="top5-exlab">ตัดลูกค้า {fmt1(r.exJun)}%</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Analysis({ dcs }) {
+  const [cat, setCat] = React.useState("total");
+  const [topN, setTopN] = React.useState(10);
+
+  const all = React.useMemo(() => {
+    return dcs.map((dc) => {
+      const a = dc[cat].all, e = dc[cat].exCust;
+      const delta = +(a.jun - a.may).toFixed(1);
+      const trend = trendOf(a.may, a.jun);
+      return { dc, delta, trend, urgency: URG[trend].key, all: { may: a.may, jun: a.jun }, ex: { may: e.may, jun: e.jun } };
+    }).sort((x, y) => x.all.jun - y.all.jun);
+  }, [cat, dcs]);
+
+  const ranked = topN >= 9999 ? all : all.slice(0, topN);
+  const minVal = all.length ? Math.min(79, ...all.map((r) => r.all.jun)) - 1 : 79;
+
+  return (
+    <div>
+      <div className="section-head">
+        <div>
+          <h2 className="section-title">วิเคราะห์ &amp; จัดลำดับความเร่งด่วน</h2>
+          <p className="section-desc">DC ที่มี SLA เดือนมิถุนายน (ทุกสาเหตุ) ต่ำสุด เรียงจากน้อยไปมาก — เน้น DC ที่ค่าลดลงจากเดือน พ.ค.</p>
+        </div>
+      </div>
+
+      <div className="controls" style={{marginBottom:18}}>
+        <div className="control-group">
+          <label className="control-label">หมวดสินค้า</label>
+          <Segmented value={cat} onChange={setCat} options={[{key:"total",label:"รวม"},{key:"general",label:"ทั่วไป"},{key:"cold",label:"Cold Chain"}]} />
+        </div>
+        <div className="control-group">
+          <label className="control-label">แสดง</label>
+          <Segmented value={String(topN)} onChange={(v) => setTopN(+v)} options={[{key:"10",label:"10 อันดับ"},{key:"20",label:"20 อันดับ"},{key:"9999",label:"ทั้งหมด"}]} />
+        </div>
+      </div>
+
+      <div className="rank-list">
+        {ranked.map((r, i) => (
+          <div key={r.dc.code} className={`rankrow urg-${r.urgency}`}>
+            <div className="rank-no">{i + 1}</div>
+            <div className="rank-dc">
+              <span className="dc-name">{r.dc.name}</span>
+              <span className={`utag utag-${r.urgency}`}>{URG[r.trend].label}</span>
+            </div>
+            <div className="rank-bar-wrap">
+              <div className="rank-bar-track">
+                <div className={`rank-bar-fill rank-bar-${r.trend}`} style={{ width: Math.max(3, Math.min(100, (r.all.jun - minVal) / (100 - minVal) * 100)) + "%" }} />
+              </div>
+              <div className="rank-modes">
+                <span className="rank-mode"><span className="rank-mode-lab">ทุกสาเหตุ</span><b className="tnum">{fmt1(r.all.jun)}%</b><Delta may={r.all.may} jun={r.all.jun} size="sm" /></span>
+                <span className="rank-mode"><span className="rank-mode-lab">ตัดสาเหตุลูกค้า</span><b className="tnum">{fmt1(r.ex.jun)}%</b><Delta may={r.ex.may} jun={r.ex.jun} size="sm" /></span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="action-note">
+        <div className="action-note-title">ข้อเสนอแนะการจัดการ</div>
+        <ul className="action-list">
+          <li><b className="status-text-fail">เร่งด่วน</b> — DC ที่ SLA เดือน มิ.ย. ต่ำและลดลงจากเดือน พ.ค. ควรตั้งทีมเร่งแก้ไขและทบทวนสาเหตุรายสัปดาห์</li>
+          <li><b className="status-text-warn">เฝ้าระวัง</b> — DC ที่ค่าทรงตัว ติดตามต่อเนื่องไม่ให้ปรับลดลง</li>
+          <li>เทียบ <b>ทุกสาเหตุ</b> กับ <b>ตัดสาเหตุลูกค้า</b> เพื่อแยกว่าปัญหามาจากกระบวนการภายในหรือจากฝั่งลูกค้า</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+// ─── Region tab ───────────────────────────────────────────────────────────────
+
+function RegionTab({ dcs }) {
+  const [cat, setCat] = React.useState('total');
+  const [expanded, setExpanded] = React.useState(null);
+
+  const regions = React.useMemo(() => {
+    return REGIONS_LIST.map(reg => {
+      const regDCs = dcs.filter(d => d.region === reg.key);
+      if (!regDCs.length) return null;
+      const avg = (mode, month) => {
+        const vals = regDCs.map(d => d[cat][mode][month]).filter(v => v != null);
+        return vals.length ? Math.round(vals.reduce((s, v) => s + v, 0) / vals.length * 10) / 10 : null;
+      };
+      const allJun = avg('all', 'jun');
+      const allMay = avg('all', 'may');
+      const exJun = avg('exCust', 'jun');
+      const exMay = avg('exCust', 'may');
+      const trend = trendOf(allMay, allJun);
+      const urgency = URG[trend].key;
+      const dcsSorted = [...regDCs].sort((a, b) => a[cat].all.jun - b[cat].all.jun);
+      return { key: reg.key, label: reg.th, count: regDCs.length, allJun, allMay, exJun, exMay, trend, urgency, dcs: dcsSorted };
+    }).filter(Boolean).sort((a, b) => a.allJun - b.allJun);
+  }, [dcs, cat]);
+
+  const minBar = regions.length ? Math.max(0, Math.min(...regions.map(r => r.allJun)) - 4) : 0;
+  const pct = (v) => v == null ? 0 : Math.max(3, Math.min(100, (v - minBar) / (100 - minBar) * 100));
+
+  const toggleExpand = (key) => setExpanded(prev => prev === key ? null : key);
+
+  return (
+    <div>
+      <div className="section-head">
+        <div>
+          <h2 className="section-title">SLA รายภูมิภาค</h2>
+          <p className="section-desc">เปรียบเทียบ SLA เฉลี่ยแต่ละภูมิภาค เดือนมิถุนายน เรียงจากต่ำไปสูง</p>
+        </div>
+      </div>
+
+      <div className="controls" style={{marginBottom:18}}>
+        <div className="control-group">
+          <label className="control-label">หมวดสินค้า</label>
+          <Segmented value={cat} onChange={setCat} options={[
+            {key:'total',label:'รวม'},{key:'general',label:'ทั่วไป'},{key:'cold',label:'Cold Chain'}
+          ]} />
+        </div>
+      </div>
+
+      <div className="region-list">
+        {regions.map(r => (
+          <div key={r.key} className="region-block">
+            <div className={`region-row urg-${r.urgency}`} onClick={() => toggleExpand(r.key)} style={{cursor:'pointer'}}>
+              <div className="region-info">
+                <span className="region-name">{r.label}</span>
+                <span className="region-cnt">{r.count} DC</span>
+                <span className={`utag utag-${r.urgency}`}>{URG[r.trend].label}</span>
+              </div>
+              <div className="region-bar-area">
+                <div className="rank-bar-track">
+                  <div className={`rank-bar-fill rank-bar-${r.trend}`} style={{width: pct(r.allJun) + '%'}} />
+                </div>
+                <div className="region-metrics">
+                  <span className="region-mode-group">
+                    <span className="rank-mode-lab">ทุกสาเหตุ</span>
+                    <b className="tnum">{fmt1(r.allJun)}%</b>
+                    <Delta may={r.allMay} jun={r.allJun} size="sm" />
+                  </span>
+                  <span className="region-mode-group">
+                    <span className="rank-mode-lab">ตัดสาเหตุลูกค้า</span>
+                    <b className="tnum">{fmt1(r.exJun)}%</b>
+                    <Delta may={r.exMay} jun={r.exJun} size="sm" />
+                  </span>
+                </div>
+              </div>
+              <div className="region-chevron">{expanded === r.key ? '▲' : '▼'}</div>
+            </div>
+
+            {expanded === r.key && (
+              <div className="region-dcs">
+                {r.dcs.map((dc, i) => {
+                  const a = dc[cat].all, e = dc[cat].exCust;
+                  const t = trendOf(a.may, a.jun);
+                  return (
+                    <div key={dc.code} className={`region-dc-row row-${t}`}>
+                      <span className="region-dc-no">{i + 1}</span>
+                      <span className="region-dc-name">{dc.name}</span>
+                      <span className="region-dc-vals">
+                        <span className="rank-mode-lab">ทุกสาเหตุ</span>
+                        <b className="tnum">{fmt1(a.jun)}%</b>
+                        <Delta may={a.may} jun={a.jun} size="sm" />
+                        <span className="rank-mode-lab" style={{marginLeft:10}}>ตัดลูกค้า</span>
+                        <b className="tnum">{fmt1(e.jun)}%</b>
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Top Rank tab ─────────────────────────────────────────────────────────────
+
+function TopRank({ dcs }) {
+  const [cat, setCat] = React.useState("total");
+
+  const top10 = React.useMemo(() => {
+    return [...dcs]
+      .filter(dc => dc[cat] && dc[cat].all.jun != null)
+      .map(dc => ({
+        dc,
+        jun: dc[cat].all.jun,
+        may: dc[cat].all.may,
+        exJun: dc[cat].exCust.jun,
+        trend: trendOf(dc[cat].all.may, dc[cat].all.jun),
+      }))
+      .sort((a, b) => b.jun - a.jun)
+      .slice(0, 10);
+  }, [dcs, cat]);
+
+  const minBar = top10.length ? Math.min(95, ...top10.map(r => r.jun)) - 1 : 90;
+
+  return (
+    <div>
+      <div className="section-head">
+        <div>
+          <h2 className="section-title">10 อันดับ DC ที่ SLA ดีที่สุด</h2>
+          <p className="section-desc">DC ที่มี SLA ทุกสาเหตุ เดือนมิถุนายน สูงสุด เรียงจากมากไปน้อย</p>
+        </div>
+      </div>
+
+      <div className="controls" style={{marginBottom:18}}>
+        <div className="control-group">
+          <label className="control-label">หมวดสินค้า</label>
+          <Segmented value={cat} onChange={setCat} options={[
+            {key:"total",label:"รวม"},{key:"general",label:"ทั่วไป"},{key:"cold",label:"Cold Chain"}
+          ]} />
+        </div>
+      </div>
+
+      <div className="top5-list">
+        {top10.map((r, i) => (
+          <div key={r.dc.code} className="top5row">
+            <div className={`top5-medal medal-${i < 3 ? i + 1 : 'n'}`}>
+              {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+            </div>
+            <div className="top5-dc-name">{r.dc.name}</div>
+            <div className="top5-bar-area">
+              <div className="rank-bar-track">
+                <div className={`rank-bar-fill rank-bar-${r.trend}`} style={{width: Math.max(3, (r.jun - minBar) / (100 - minBar) * 100) + '%'}} />
+              </div>
+              <div className="top5-metrics">
+                <span className="tnum top5-jun">{fmt1(r.jun)}%</span>
+                <Delta may={r.may} jun={r.jun} size="sm" />
+                <span className="top5-exlab">ตัดลูกค้า {fmt1(r.exJun)}%</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Trend tab ───────────────────────────────────────────────────────────────
+
+function TrendChart({ months, allSeries, exSeries }) {
+  if (!months || months.length < 2) return null;
+  const allVals = [...allSeries, ...exSeries].filter(v => v != null);
+  if (!allVals.length) return null;
+
+  const W = 700, H = 210;
+  const PAD = { top: 28, right: 20, bottom: 32, left: 46 };
+  const cW = W - PAD.left - PAD.right;
+  const cH = H - PAD.top - PAD.bottom;
+
+  const minV = Math.max(0, Math.min(...allVals) - 3);
+  const maxV = Math.min(100, Math.max(...allVals) + 2);
+  const range = maxV - minV || 1;
+
+  const xOf = (i) => PAD.left + (i / (months.length - 1)) * cW;
+  const yOf = (v) => PAD.top + cH - ((v - minV) / range) * cH;
+
+  const makePath = (series) => {
+    let d = '';
+    series.forEach((v, i) => {
+      if (v == null) return;
+      d += `${d === '' ? 'M' : 'L'}${xOf(i).toFixed(1)},${yOf(v).toFixed(1)} `;
+    });
+    return d.trim();
+  };
+
+  const yTicks = Array.from({ length: 5 }, (_, i) => minV + (range / 4) * i);
+
+  return (
+    <div className="trend-chart-area">
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{display:'block',overflow:'visible'}}>
+        {yTicks.map((v, i) => (
+          <g key={i}>
+            <line x1={PAD.left} x2={W - PAD.right} y1={yOf(v)} y2={yOf(v)} stroke="var(--border)" strokeWidth="1" />
+            <text x={PAD.left - 7} y={yOf(v) + 4} textAnchor="end" fontSize="11" fill="var(--faint)">{fmt1(v)}</text>
+          </g>
+        ))}
+        <path d={makePath(exSeries)} fill="none" stroke="var(--pass)" strokeWidth="2" strokeDasharray="5,3" strokeLinecap="round" strokeLinejoin="round" />
+        <path d={makePath(allSeries)} fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        {allSeries.map((v, i) => v != null && (
+          <g key={i}>
+            <circle cx={xOf(i)} cy={yOf(v)} r="4" fill="var(--accent)" />
+            <text x={xOf(i)} y={yOf(v) - 9} textAnchor="middle" fontSize="11" fontWeight="600" fill="var(--accent)">{fmt1(v)}%</text>
+          </g>
+        ))}
+        {exSeries.map((v, i) => v != null && (
+          <circle key={i} cx={xOf(i)} cy={yOf(v)} r="3.5" fill="var(--pass)" />
+        ))}
+        {months.map((m, i) => (
+          <text key={i} x={xOf(i)} y={H - 6} textAnchor="middle" fontSize="11.5" fill="var(--muted)">{m}</text>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+function TrendTab({ trendData }) {
+  const [cat, setCat] = React.useState('total');
+
+  if (!trendData) {
+    return (
+      <div className="center-state">
+        <div className="config-box">
+          <div className="config-title">ยังไม่มีข้อมูล Trend</div>
+          <div className="config-desc">เพิ่มชีท <b>Trend_AB</b>, <b>Trend_CC</b>, และ <b>Trend_AB+CC</b> ใน Google Sheets ตามโครงสร้างที่กำหนด</div>
+        </div>
+      </div>
+    );
+  }
+
+  const catData = trendData[cat];
+  const gt = catData?.grandTotal;
+  const months = catData?.months || [];
+
+  const allSeries = months.map(m => gt?.months[m]?.all ?? null);
+  const exSeries  = months.map(m => gt?.months[m]?.ex  ?? null);
+
+  const NAMES = { total: 'SLA รวม (AB+CC)', general: 'สินค้าทั่วไป (AB)', cold: 'Cold Chain (CC)' };
+
+  return (
+    <div>
+      <div className="section-head">
+        <div>
+          <h2 className="section-title">แนวโน้ม SLA รายเดือน</h2>
+          <p className="section-desc">ภาพรวมทุกสาขา ม.ค. – มิ.ย. 2569</p>
+        </div>
+      </div>
+
+      <div className="controls" style={{marginBottom:18}}>
+        <div className="control-group">
+          <label className="control-label">หมวดสินค้า</label>
+          <Segmented value={cat} onChange={setCat} options={[
+            {key:'total',label:'รวม'},{key:'general',label:'ทั่วไป'},{key:'cold',label:'Cold Chain'}
+          ]} />
+        </div>
+      </div>
+
+      <div className="trend-card">
+        <div className="trend-card-head">
+          <span className="trend-card-title">{NAMES[cat]}</span>
+          <div className="trend-legend-row">
+            <span className="trend-leg"><span className="trend-leg-line" style={{background:'var(--accent)'}} />ทุกสาเหตุ</span>
+            <span className="trend-leg"><span className="trend-leg-line" style={{background:'var(--pass)',borderTop:'2px dashed var(--pass)',height:0}} />ตัดสาเหตุลูกค้า</span>
+          </div>
+        </div>
+        {gt && months.length >= 2
+          ? <TrendChart months={months} allSeries={allSeries} exSeries={exSeries} />
+          : <div className="trend-empty">ยังไม่มีข้อมูลเพียงพอ (ต้องมีอย่างน้อย 2 เดือน)</div>
         }
       </div>
     </div>
   );
 }
 
-function TabBar({ tab, setTab, mobile }) {
-  const tabs = [
-    { id: 'compare', label: 'เปรียบเทียบการเปลี่ยนแปลง' },
-    { id: 'current', label: 'บิลคงค้างปัจจุบัน' },
-  ];
-  return (
-    <div style={{ display: 'flex', gap: mobile ? 0 : 4, padding: mobile ? '0 12px' : '0 24px', background: C.surface, borderBottom: `1px solid ${C.line}` }}>
-      {tabs.map((t) => {
-        const active = tab === t.id;
-        return (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
-            flex: mobile ? 1 : '0 0 auto', appearance: 'none', border: 'none', background: 'transparent', cursor: 'pointer',
-            padding: mobile ? '13px 8px' : '13px 16px', fontFamily: 'inherit', fontSize: mobile ? 13.5 : 14,
-            fontWeight: active ? 700 : 500, color: active ? C.blue : C.ink2,
-            borderBottom: `2.5px solid ${active ? C.blue : 'transparent'}`, marginBottom: -1,
-          }}>{t.label}</button>
-        );
-      })}
-    </div>
-  );
-}
+// ─── App ──────────────────────────────────────────────────────────────────────
 
-function FilterBar({ dcs, SYSTEM }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 28px', background: C.surface2, borderBottom: `1px solid ${C.line}` }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', background: C.surface, border: `1px solid ${C.line}`, borderRadius: 8, width: 220, color: C.ink3, fontSize: 13 }}>
-        <span style={{ fontSize: 14 }}>⌕</span> ค้นหา DC…
-      </div>
-      {['ทุกภูมิภาค', 'กลาง', 'เหนือ', 'อีสาน', 'ใต้', 'ตะวันออก'].map((t, i) =>
-        <span key={t} style={{ padding: '7px 13px', borderRadius: 8, fontSize: 13, fontWeight: 600, background: i === 0 ? C.blue : C.surface, color: i === 0 ? '#fff' : C.ink2, border: `1px solid ${i === 0 ? C.blue : C.line}` }}>{t}</span>
-      )}
-      <div style={{ flex: 1 }} />
-      <span style={{ fontSize: 12.5, color: C.ink3 }}>แสดง {dcs.length} จาก {SYSTEM.dcCount} DC</span>
-    </div>
-  );
-}
-
-function KpiBlock({ items }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', padding: '18px 28px', borderRight: `1px solid ${C.line}` }}>
-      {items.map((it, i) =>
-        <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: i === 0 ? '0 24px 0 0' : '0 24px', borderRight: i < items.length - 1 ? `1px solid ${C.line}` : 'none' }}>
-          <span style={{ fontSize: 12, color: C.ink2, whiteSpace: 'nowrap' }}>{it.label}</span>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span className="num" style={{ fontSize: 27, fontWeight: 600, lineHeight: 1, color: it.color || C.ink }}>{it.value}</span>
-            {it.tag && <span className="num" style={{ fontSize: 12, fontWeight: 600, color: it.color }}>{it.tag}</span>}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function StatusSummary({ stObj, total, title }) {
-  return (
-    <div style={{ padding: '14px 28px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9 }}>
-        <span style={{ fontSize: 12.5, fontWeight: 700, color: C.ink2 }}>{title}</span>
-        <SyncChip />
-      </div>
-      <div style={{ marginBottom: 11 }}><StatusBar st={stObj} total={total} height={10} /></div>
-      <StatusLegend columns={3} valueOf={(s) => stObj[s.key]} />
-    </div>
-  );
-}
-
-function SortTh({ label, k, sort, setSort, align = 'right', w }) {
-  const active = sort.key === k;
-  const arrow = active ? sort.dir === 'asc' ? '▲' : '▼' : '⇅';
-  return (
-    <th onClick={() => setSort((s) => ({ key: k, dir: s.key === k && s.dir === 'desc' ? 'asc' : 'desc' }))}
-      style={{ cursor: 'pointer', textAlign: align, padding: '10px 16px', fontSize: 11.5, fontWeight: 600, color: active ? C.blue : C.ink3, whiteSpace: 'nowrap', width: w, userSelect: 'none' }}>
-      {label}<span style={{ marginLeft: 5, fontSize: 9, color: active ? C.blue : C.line }}>{arrow}</span>
-    </th>
-  );
-}
-
-function CompareDesktop() {
-  const { dcs, SYSTEM } = window.DCDATA;
-  const [open, setOpen] = useStateB2(null);
-  const [ptype, setPtype] = useStateB2('all');
-  const [sort, setSort] = useStateB2({ key: 'remaining', dir: 'desc' });
-  const T = (d) => d.byType[ptype];
-  const S = SYSTEM.byType[ptype];
-  const counts = { all: SYSTEM.byType.all.baseline, gen: SYSTEM.byType.gen.baseline, cold: SYSTEM.byType.cold.baseline };
-  const sorted = [...dcs].sort((a, b) => {
-    if (sort.key === 'name') return sort.dir === 'asc' ? a.name.localeCompare(b.name, 'th') : b.name.localeCompare(a.name, 'th');
-    return sort.dir === 'asc' ? T(a)[sort.key] - T(b)[sort.key] : T(b)[sort.key] - T(a)[sort.key];
-  });
-  return (
-    <React.Fragment>
-      <div style={{ display: 'flex', alignItems: 'center', padding: '14px 28px', background: C.surface, borderBottom: `1px solid ${C.line}` }}>
-        <ProductTabs value={ptype} onChange={setPtype} counts={counts} big />
-      </div>
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.line}` }}>
-        <KpiBlock items={[
-          { label: 'บิลตั้งต้น', value: fmt(S.baseline) },
-          { label: 'เคลียร์แล้ว', value: `−${fmt(S.cleared)}`, color: C.green, tag: `${pct(S.cleared, S.baseline)}%` },
-          { label: 'ยังคงค้าง', value: fmt(S.remaining), color: C.blue },
-        ]} />
-      </div>
-      <FilterBar dcs={dcs} SYSTEM={SYSTEM} />
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr style={{ background: C.surface2, borderBottom: `1px solid ${C.line}` }}>
-            <SortTh label="DC ปลายทาง" k="name" sort={sort} setSort={setSort} align="left" />
-            <SortTh label="บิลตั้งต้น" k="baseline" sort={sort} setSort={setSort} w={130} />
-            <SortTh label="เคลียร์แล้ว" k="cleared" sort={sort} setSort={setSort} w={150} />
-            <SortTh label="ยังคงค้าง" k="remaining" sort={sort} setSort={setSort} w={130} />
-            <ThB2 w={46}></ThB2>
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((d, i) => {
-            const isOpen = open === d.code;
-            const t = T(d);
-            const clr = t.baseline ? Math.round(t.cleared / t.baseline * 100) : 0;
-            return (
-              <React.Fragment key={d.code}>
-                <tr onClick={() => setOpen(isOpen ? null : d.code)} style={{ borderBottom: `1px solid ${C.line2}`, background: isOpen ? C.blueSoft : i % 2 ? C.surface2 : C.surface, cursor: 'pointer' }}>
-                  <td style={{ padding: '11px 16px', fontSize: 14, fontWeight: 600 }}>{d.name}</td>
-                  <TdNum color={C.ink3}>{fmt(t.baseline)}</TdNum>
-                  <TdNum color={C.green} bold sub={`${clr}%`}>−{fmt(t.cleared)}</TdNum>
-                  <TdNum color={C.blue} bold>{fmt(t.remaining)}</TdNum>
-                  <td style={{ padding: '9px 16px', textAlign: 'center', color: C.ink3, fontSize: 13, transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}>›</td>
-                </tr>
-                {isOpen && <tr style={{ background: '#fff' }}><td colSpan={5} style={{ padding: 0 }}><StatusDetail d={{ ...d, baseline: t.baseline, cleared: t.cleared }} stObj={t.st} total={t.remaining} title="ยังคงค้าง แยกตามสถานะบิล" showCleared /></td></tr>}
-              </React.Fragment>
-            );
-          })}
-        </tbody>
-        <tfoot>
-          <tr style={{ borderTop: `2px solid ${C.blueEdge}`, background: C.blueSoft }}>
-            <td style={{ padding: '13px 16px', fontSize: 14, fontWeight: 700, color: C.blueDeep }}>รวม {SYSTEM.dcCount} DC</td>
-            <td className="num" style={{ padding: '13px 16px', textAlign: 'right', fontSize: 14, fontWeight: 700, color: C.blueDeep }}>{fmt(S.baseline)}</td>
-            <td className="num" style={{ padding: '13px 16px', textAlign: 'right', fontSize: 14, fontWeight: 700, color: C.green }}>−{fmt(S.cleared)}</td>
-            <td className="num" style={{ padding: '13px 16px', textAlign: 'right', fontSize: 14, fontWeight: 700, color: C.blue }}>{fmt(S.remaining)}</td>
-            <td></td>
-          </tr>
-        </tfoot>
-      </table>
-    </React.Fragment>
-  );
-}
-
-function smeta(key) { return window.DCDATA.STATUSES.find((s) => s.key === key); }
-
-function ProductChip({ type }) {
-  const cold = type === 'cold';
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, padding: '3px 9px', borderRadius: 99, background: cold ? C.blueSoft : C.surface2, color: cold ? C.blue : C.ink2, border: `1px solid ${cold ? C.blueEdge : C.line}` }}>
-      <span style={{ width: 7, height: 7, borderRadius: 99, background: cold ? C.blue : C.ink3 }} />
-      {cold ? 'Coldchain' : 'ทั่วไป'}
-    </span>
-  );
-}
-
-function ProductTabs({ value, onChange, counts, big }) {
-  const opts = [{ id: 'all', label: 'ทั้งหมด' }, { id: 'gen', label: 'สินค้าทั่วไป' }, { id: 'cold', label: 'สินค้า Coldchain' }];
-  return (
-    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-      {opts.map((o) => {
-        const a = value === o.id;
-        return (
-          <button key={o.id} onClick={() => onChange(o.id)} style={{
-            appearance: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
-            padding: big ? '9px 15px' : '7px 12px', borderRadius: 9, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600,
-            background: a ? C.blue : C.surface, color: a ? '#fff' : C.ink2, border: `1px solid ${a ? C.blue : C.line}`,
-          }}>
-            {o.label}
-            <span className="num" style={{ fontSize: 12, fontWeight: 700, padding: '1px 7px', borderRadius: 99, background: a ? 'rgba(255,255,255,.22)' : C.surface2, color: a ? '#fff' : C.ink3 }}>{fmt(counts[o.id])}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function curObjOf(ptype) {
-  const { SYSTEM } = window.DCDATA;
-  return ptype === 'gen' ? SYSTEM.curGen : ptype === 'cold' ? SYSTEM.curCold : SYSTEM.cur;
-}
-function curCounts() {
-  const { SYSTEM } = window.DCDATA;
-  return { all: SYSTEM.curTotal, gen: SYSTEM.curGenTotal, cold: SYSTEM.curColdTotal };
-}
-
-function pcell(cell, ptype) { return ptype === 'gen' ? cell.gen : ptype === 'cold' ? cell.cold : cell.total; }
-function prow(row, ptype) { return ptype === 'gen' ? row.totGen : ptype === 'cold' ? row.totCold : row.tot; }
-
-function CurrentDesktop() {
-  const { SYSTEM, DATES, matrix, colTot, grand } = window.DCDATA;
-  const [ptype, setPtype] = useStateB2('all');
-  const counts = curCounts();
-  const curObj = curObjOf(ptype);
-  const curTot = counts[ptype];
-  const grandTot = prow({ totGen: grand.gen, totCold: grand.cold, tot: grand.total }, ptype);
-  return (
-    <React.Fragment>
-      <div style={{ display: 'flex', alignItems: 'center', padding: '14px 28px', background: C.surface, borderBottom: `1px solid ${C.line}` }}>
-        <ProductTabs value={ptype} onChange={setPtype} counts={counts} big />
-      </div>
-      <FilterBar dcs={matrix} SYSTEM={SYSTEM} />
-      <div style={{ padding: '10px 28px 4px', fontSize: 12, color: C.ink3 }}>จำนวนบิลคงค้าง แยกตาม DC ปลายทาง × วันที่บิล</div>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ background: C.surface2, borderBottom: `1px solid ${C.line}` }}>
-              <ThB2 align="left" w={220}>DC ปลายทาง</ThB2>
-              {DATES.map((d) => <ThB2 key={d.key} w={66}><div className="num" style={{ fontWeight: 600, color: C.ink2 }}>{d.day}</div><div style={{ fontWeight: 400, fontSize: 10, color: C.ink3, marginTop: 1 }}>{d.month}</div></ThB2>)}
-              <ThB2 w={92}>รวม</ThB2>
-            </tr>
-          </thead>
-          <tbody>
-            {matrix.map((row, i) => {
-              const rt = prow(row, ptype);
-              return (
-                <tr key={row.code} style={{ borderBottom: `1px solid ${C.line2}`, background: i % 2 ? C.surface2 : C.surface }}>
-                  <td style={{ padding: '10px 16px', fontSize: 14, fontWeight: 600 }}>{row.name}</td>
-                  {row.cells.map((cell, ci) => {
-                    const v = pcell(cell, ptype);
-                    return <td key={ci} className="num" style={{ textAlign: 'right', padding: '10px 16px', fontSize: 13.5, color: v ? C.ink2 : C.line }}>{v ? fmt(v) : '·'}</td>;
-                  })}
-                  <td className="num" style={{ textAlign: 'right', padding: '10px 16px', fontSize: 14, fontWeight: 700, color: C.blue, background: C.blueSoft }}>{fmt(rt)}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-          <tfoot>
-            <tr style={{ borderTop: `2px solid ${C.blueEdge}`, background: C.blueSoft }}>
-              <td style={{ padding: '12px 16px', fontSize: 14, fontWeight: 700, color: C.blueDeep }}>รวม {SYSTEM.dcCount} DC</td>
-              {colTot.map((ct, ci) =>
-                <td key={ci} className="num" style={{ textAlign: 'right', padding: '12px 16px', fontSize: 13.5, fontWeight: 700, color: C.blueDeep }}>{fmt(pcell(ct, ptype))}</td>
-              )}
-              <td className="num" style={{ textAlign: 'right', padding: '12px 16px', fontSize: 14, fontWeight: 800, color: C.blueDeep }}>{fmt(grandTot)}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 28px', borderTop: `1px solid ${C.line}`, background: C.surface }}>
-        <span style={{ fontSize: 12.5, color: C.ink3 }}>แสดง {matrix.length} DC</span>
-      </div>
-    </React.Fragment>
-  );
-}
-
-const AGING_BUCKETS = [
-  { label: '1–3 วัน', test: (a) => a >= 1 && a <= 3 },
-  { label: '4–5 วัน', test: (a) => a >= 4 && a <= 5 },
-  { label: '6–7 วัน', test: (a) => a >= 6 && a <= 7 },
-  { label: '8–14 วัน', test: (a) => a >= 8 && a <= 14 },
-  { label: '>14 วัน', test: (a) => a >= 15 },
-];
-
-function CurrentMobile() {
-  const { DATES, matrix, SYSTEM } = window.DCDATA;
-  const [ptype, setPtype] = useStateB2('all');
-  const [q, setQ] = useStateB2('');
-  const counts = curCounts();
-
-  const getAge = (di) => DATES[di].age;
-
-  const rows = matrix.map((row) => {
-    const b = [0, 0, 0, 0, 0];
-    let oi = -1;
-    DATES.forEach((_, i) => {
-      const v = pcell(row.cells[i], ptype);
-      if (!v) return;
-      if (oi === -1) oi = i;
-      const age = getAge(i);
-      const bi = AGING_BUCKETS.findIndex((bk) => bk.test(age));
-      if (bi >= 0) b[bi] += v;
-    });
-    const tot = b.reduce((a, v) => a + v, 0);
-    const oldest = oi >= 0 ? `${DATES[oi].day} ${DATES[oi].month}` : null;
-    return { ...row, b, tot, oldest };
-  }).filter((r) => r.tot > 0);
-
-  const colTots = AGING_BUCKETS.map((_, bi) => rows.reduce((a, r) => a + r.b[bi], 0));
-  const filtered = rows.filter((r) => matchDC(r, q));
-
-  return (
-    <React.Fragment>
-      <div style={{ padding: '12px 16px', background: C.surface, borderBottom: `1px solid ${C.line}` }}>
-        <div style={{ marginBottom: 10 }}><ProductTabs value={ptype} onChange={setPtype} counts={counts} /></div>
-        <MobileSearch q={q} setQ={setQ} shown={filtered.length} total={SYSTEM.dcCount} />
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr repeat(5, 40px)', gap: 0, alignItems: 'end', padding: '10px 12px 8px', background: C.surface2, borderBottom: `1px solid ${C.line}` }}>
-        <span style={{ fontSize: 10.5, fontWeight: 600, color: C.ink3 }}>DC ปลายทาง</span>
-        {AGING_BUCKETS.map((bk, i) => (
-          <div key={i} style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 9.5, fontWeight: 600, color: C.ink2, lineHeight: 1.2 }}>{bk.label}</div>
-          </div>
-        ))}
-      </div>
-      {filtered.map((d, ri) => (
-        <div key={d.code} style={{ display: 'grid', gridTemplateColumns: '1fr repeat(5, 40px)', alignItems: 'center', padding: '9px 12px', background: ri % 2 ? C.surface2 : C.surface, borderBottom: `1px solid ${C.line2}` }}>
-          <div style={{ minWidth: 0, paddingRight: 6 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.name}</div>
-            <div style={{ fontSize: 10.5, color: C.ink3, marginTop: 2, whiteSpace: 'nowrap' }}>
-              เก่าสุด <span className="num" style={{ color: C.ink2, fontWeight: 600 }}>{d.oldest || '–'}</span>
-              {' · '}รวม <span className="num" style={{ color: C.blue, fontWeight: 700 }}>{fmt(d.tot)}</span>
-            </div>
-          </div>
-          {d.b.map((v, i) => (
-            <span key={i} className="num" style={{ textAlign: 'center', fontSize: 12.5, fontWeight: v ? 600 : 400, color: !v ? C.line : i >= 3 ? C.red : C.ink2 }}>
-              {v || '·'}
-            </span>
-          ))}
-        </div>
-      ))}
-      {filtered.length === 0 && (
-        <div style={{ padding: '34px 16px', textAlign: 'center', fontSize: 13, color: C.ink3, background: C.surface }}>
-          ไม่พบ DC ที่ตรงกับ "{q}"
-        </div>
-      )}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr repeat(5, 40px)', alignItems: 'center', padding: '11px 12px', background: C.blueSoft, borderTop: `2px solid ${C.blueEdge}` }}>
-        <span style={{ fontSize: 12, fontWeight: 700, color: C.blueDeep }}>รวม {SYSTEM.dcCount} DC</span>
-        {colTots.map((v, i) => (
-          <span key={i} className="num" style={{ textAlign: 'center', fontSize: 12, fontWeight: 700, color: C.blueDeep }}>{fmt(v)}</span>
-        ))}
-      </div>
-    </React.Fragment>
-  );
-}
-
-function DesktopB2() {
-  const [tab, setTab] = useStateB2('compare');
-  return (
-    <div className="billapp" style={{ width: '100%', minHeight: 1180, background: C.bg }}>
-      <TopBar tab={tab} />
-      <TabBar tab={tab} setTab={setTab} />
-      {tab === 'compare' ? <CompareDesktop /> : <CurrentDesktop />}
-    </div>
-  );
-}
-
-function MobileKpi({ items }) {
-  return (
-    <div style={{ display: 'flex', background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 10, padding: '11px 6px' }}>
-      {items.map((it, i) =>
-        <React.Fragment key={i}>
-          {i > 0 && <div style={{ width: 1, background: C.line }} />}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center', flex: 1 }}>
-            <span className="num" style={{ fontSize: 16, fontWeight: 600, color: it.color || C.ink }}>{it.value}</span>
-            <span style={{ fontSize: 10, color: C.ink3 }}>{it.label}</span>
-          </div>
-        </React.Fragment>
-      )}
-    </div>
-  );
-}
-
-function MobileSearch({ q, setQ, shown, total }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 11 }}>
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: C.surface, border: `1px solid ${q ? C.blueEdge : C.line}`, borderRadius: 9, minWidth: 0 }}>
-        <span style={{ fontSize: 15, color: C.ink3, flex: '0 0 auto' }}>⌕</span>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="ค้นหา DC…"
-          style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: 13.5, color: C.ink }} />
-        {q && <span onClick={() => setQ('')} style={{ cursor: 'pointer', color: C.ink3, fontSize: 16, lineHeight: 1, flex: '0 0 auto' }}>×</span>}
-      </div>
-      <span className="num" style={{ fontSize: 11.5, color: C.ink3, whiteSpace: 'nowrap', flex: '0 0 auto' }}>{shown}/{total} DC</span>
-    </div>
-  );
-}
-
-function matchDC(d, q) {
-  const s = q.trim().toLowerCase();
-  if (!s) return true;
-  return (d.name || '').toLowerCase().includes(s) || (d.code || '').toLowerCase().includes(s);
-}
-
-function MobileTable() {
-  const { dcs, SYSTEM } = window.DCDATA;
-  const [open, setOpen] = useStateB2(null);
-  const [q, setQ] = useStateB2('');
-  const [sort, setSort] = useStateB2({ key: 'remaining', dir: 'desc' });
-  const sorted = [...dcs].sort((a, b) => {
-    if (sort.key === 'name') return sort.dir === 'asc' ? a.name.localeCompare(b.name, 'th') : b.name.localeCompare(a.name, 'th');
-    return sort.dir === 'asc' ? a[sort.key] - b[sort.key] : b[sort.key] - a[sort.key];
-  });
-  const filtered = sorted.filter((d) => matchDC(d, q));
-  const sortLabel = (label, k, align = 'right') => {
-    const active = sort.key === k;
-    return (
-      <span onClick={() => setSort((s) => ({ key: k, dir: s.key === k && s.dir === 'desc' ? 'asc' : 'desc' }))}
-        style={{ textAlign: align, cursor: 'pointer', color: active ? C.blue : C.ink3, userSelect: 'none' }}>
-        {label}{active ? sort.dir === 'asc' ? ' ▲' : ' ▼' : ' ⇅'}
-      </span>
-    );
-  };
-  return (
-    <React.Fragment>
-      <div style={{ padding: '12px 16px', background: C.surface, borderBottom: `1px solid ${C.line}` }}>
-        <MobileKpi items={[
-          { label: 'บิลตั้งต้น', value: fmt(SYSTEM.baseline) },
-          { label: 'เคลียร์แล้ว', value: `−${fmt(SYSTEM.cleared)}`, color: C.green },
-          { label: 'ยังคงค้าง', value: fmt(SYSTEM.remaining), color: C.blue },
-        ]} />
-        <MobileSearch q={q} setQ={setQ} shown={filtered.length} total={SYSTEM.dcCount} />
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 72px 72px 16px', gap: 6, padding: '10px 16px', fontSize: 11, fontWeight: 600, borderBottom: `1px solid ${C.line}`, background: C.surface2 }}>
-        {sortLabel('DC ปลายทาง', 'name', 'left')}
-        {sortLabel('เคลียร์', 'cleared')}
-        {sortLabel('คงค้าง', 'remaining')}
-        <span></span>
-      </div>
-      {filtered.map((d, i) => {
-        const isOpen = open === d.code;
-        return (
-          <div key={d.code}>
-            <div onClick={() => setOpen(isOpen ? null : d.code)} style={{ display: 'grid', gridTemplateColumns: '1fr 72px 72px 16px', gap: 6, alignItems: 'center', padding: '11px 16px', background: isOpen ? C.blueSoft : i % 2 ? C.surface2 : C.surface, borderBottom: `1px solid ${C.line2}` }}>
-              <span style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</span>
-              <span className="num" style={{ textAlign: 'right', fontSize: 13.5, color: C.green, fontWeight: 600 }}>−{fmt(d.cleared)}</span>
-              <span className="num" style={{ textAlign: 'right', fontSize: 13.5, color: C.blue, fontWeight: 600 }}>{fmt(d.remaining)}</span>
-              <span style={{ textAlign: 'center', color: C.ink3, transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}>›</span>
-            </div>
-            {isOpen && <StatusDetail d={d} stObj={d.st} total={d.remaining} title="ยังคงค้าง แยกตามสถานะ" showCleared compact />}
-          </div>
-        );
-      })}
-      {filtered.length === 0 &&
-        <div style={{ padding: '34px 16px', textAlign: 'center', fontSize: 13, color: C.ink3, background: C.surface }}>ไม่พบ DC ที่ตรงกับ "{q}"</div>
-      }
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 72px 72px 16px', gap: 6, alignItems: 'center', padding: '13px 16px', background: C.blueSoft, borderTop: `2px solid ${C.blueEdge}` }}>
-        <span style={{ fontSize: 12.5, fontWeight: 700, color: C.blueDeep }}>รวม {SYSTEM.dcCount} DC</span>
-        <span className="num" style={{ textAlign: 'right', fontSize: 13.5, color: C.green, fontWeight: 700 }}>−{fmt(SYSTEM.cleared)}</span>
-        <span className="num" style={{ textAlign: 'right', fontSize: 13.5, color: C.blue, fontWeight: 700 }}>{fmt(SYSTEM.remaining)}</span>
-        <span></span>
-      </div>
-    </React.Fragment>
-  );
-}
-
-function MobileB2() {
-  const [tab, setTab] = useStateB2('compare');
-  return (
-    <div className="billapp" style={{ width: '100%', minHeight: 1020, background: C.bg }}>
-      <div style={{ position: 'sticky', top: 0, zIndex: 5 }}>
-        <TopBar tab={tab} />
-        <TabBar tab={tab} setTab={setTab} mobile />
-      </div>
-      {tab === 'compare' ? <MobileTable /> : <CurrentMobile />}
-    </div>
-  );
-}
-
-Object.assign(window, { DesktopB2, MobileB2 });
-</script>
-
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     App bootstrap — แก้ไข SHEET_CSV_URL เพื่อเชื่อมต่อ Google Sheet
-     ═══════════════════════════════════════════════════════════════════════════ -->
-<script type="text/babel">
-/* ════════════════════════════════════════════════════════════════════════════
-   ⚙  CONFIGURATION — แก้ไขตรงนี้เพื่อเชื่อมต่อ Google Sheet
-   ─────────────────────────────────────────────────────────────────────────
-   วิธีรับ URL:
-     1. เปิด Google Sheet ของคุณ
-     2. File → Share → Publish to web
-     3. เลือกแท็บที่มีข้อมูล → เลือกรูปแบบ "Comma-separated values (.csv)"
-     4. กด Publish → Copy link
-     5. วาง URL นั้นแทนที่ค่าด้านล่าง
-   ════════════════════════════════════════════════════════════════════════════ */
-const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQeMv14vrWH-hu18OoP1cd2oeLTDTsV-cVFU8oO793DOPmQfMwo-jaEEnKAH8OcHgLo6ZCAUF5vH7jK/pub?output=csv';
-/* ══════════════════════════════════════════════════════════════════════════ */
-
-function SetupScreen() {
-  return (
-    <div className="billapp" style={{ minHeight: '100vh', background: '#f4f6fa', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ maxWidth: 520, width: '100%', background: '#fff', borderRadius: 16, border: `1px solid ${C.line}`, padding: '36px 32px', boxShadow: '0 4px 24px rgba(0,0,0,.07)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: C.blue, color: '#fff', fontWeight: 700, fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>บ</div>
-          <div>
-            <div style={{ fontSize: 17, fontWeight: 700 }}>สถานะบิลคงค้าง · ราย DC</div>
-            <div style={{ fontSize: 12, color: C.ink3, marginTop: 1 }}>ตั้งค่าการเชื่อมต่อ Google Sheet</div>
-          </div>
-        </div>
-        <div style={{ background: C.blueSoft, border: `1px solid ${C.blueEdge}`, borderRadius: 10, padding: '14px 16px', marginBottom: 24 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.blue, marginBottom: 6 }}>วิธีรับ URL สำหรับดึงข้อมูลสด</div>
-          {[
-            'เปิด Google Sheet ของคุณ',
-            'กด File → Share → Publish to web',
-            'เลือกแท็บที่มีข้อมูล → รูปแบบ "Comma-separated values (.csv)"',
-            'กด Publish แล้ว Copy link ที่ได้',
-            'วาง URL นั้นใน app-live.html บรรทัด SHEET_CSV_URL = \'...\' แล้วรีเฟรช',
-          ].map((step, i) => (
-            <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: i < 4 ? 8 : 0 }}>
-              <span className="num" style={{ width: 22, height: 22, borderRadius: 99, background: C.blue, color: '#fff', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto', marginTop: 1 }}>{i + 1}</span>
-              <span style={{ fontSize: 13, color: C.ink2, lineHeight: 1.5 }}>{step}</span>
-            </div>
-          ))}
-        </div>
-        <div style={{ background: C.surface2, border: `1px solid ${C.line}`, borderRadius: 10, padding: '14px 16px' }}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, color: C.ink2, marginBottom: 6 }}>คอลัมน์ที่แอปใช้</div>
-          {[
-            ['C', 'วันที่บิล', 'DD/MM/YYYY (พ.ศ.)'],
-            ['R', 'DC ปลายทาง', 'ชื่อ/รหัส DC'],
-            ['T', 'สถานะบิล', '031, 033, 051xxxxx, CLEAR'],
-            ['Y', 'ประเภทบิล', 'สินค้าทั่วไป / สินค้า Coldchain'],
-          ].map(([col, name, note]) => (
-            <div key={col} style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 5 }}>
-              <span className="num" style={{ fontSize: 11, fontWeight: 700, color: C.blueDeep, background: C.blueSoft, border: `1px solid ${C.blueEdge}`, borderRadius: 4, padding: '1px 6px', flex: '0 0 auto' }}>{col}</span>
-              <span style={{ fontSize: 13, fontWeight: 600 }}>{name}</span>
-              <span style={{ fontSize: 11.5, color: C.ink3 }}>{note}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function LoadingScreen() {
-  return (
-    <div className="billapp" style={{ minHeight: '100vh', background: '#f4f6fa', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20 }}>
-      <div style={{ width: 44, height: 44, borderRadius: 11, background: C.blue, color: '#fff', fontWeight: 700, fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>บ</div>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>กำลังโหลดข้อมูล…</div>
-        <div style={{ fontSize: 12.5, color: C.ink3 }}>ดึงข้อมูลจาก Google Sheet</div>
-      </div>
-      <div style={{ display: 'flex', gap: 6 }}>
-        {[0, 1, 2].map((i) => (
-          <div key={i} style={{
-            width: 8, height: 8, borderRadius: 4, background: C.blue, opacity: 0.3,
-            animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite`,
-          }} />
-        ))}
-      </div>
-      <style>{`@keyframes pulse { 0%,100%{opacity:.3} 50%{opacity:1} }`}</style>
-    </div>
-  );
-}
-
-function ErrorScreen({ error, onRetry }) {
-  const is403 = error.includes('403');
-  return (
-    <div className="billapp" style={{ minHeight: '100vh', background: '#f4f6fa', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ maxWidth: 480, width: '100%', background: '#fff', borderRadius: 16, border: `1px solid ${C.line}`, padding: '32px 28px', boxShadow: '0 4px 24px rgba(0,0,0,.07)' }}>
-        <div style={{ width: 44, height: 44, borderRadius: 22, background: '#fbeae5', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, fontSize: 20 }}>⚠</div>
-        <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: C.ink }}>โหลดข้อมูลไม่สำเร็จ</div>
-        <div className="num" style={{ fontSize: 12, color: C.red, background: '#fbeae5', borderRadius: 7, padding: '8px 12px', marginBottom: 16, wordBreak: 'break-all' }}>{error}</div>
-        {is403 && (
-          <div style={{ background: C.blueSoft, border: `1px solid ${C.blueEdge}`, borderRadius: 10, padding: '12px 14px', marginBottom: 16, fontSize: 13, color: C.ink2, lineHeight: 1.6 }}>
-            <strong>สาเหตุ:</strong> ชีตยังไม่ได้เปิดเป็นสาธารณะ<br />
-            ต้องใช้ <strong>File → Share → Publish to web</strong> (ไม่ใช่แค่ Share)
-          </div>
-        )}
-        <button onClick={onRetry} style={{ width: '100%', padding: '12px 0', background: C.blue, color: '#fff', border: 'none', borderRadius: 9, fontFamily: 'inherit', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-          ลองใหม่อีกครั้ง
-        </button>
-      </div>
-    </div>
-  );
-}
+const TWEAK_DEFAULTS = { overviewLayout: "rows", accent: "#1f5fb0", density: "regular" };
+const TABS = [{ key: "overview", th: "ภาพรวม" }, { key: "trend", th: "Trend" }, { key: "region", th: "ภูมิภาค" }, { key: "bydc", th: "ราย DC" }, { key: "top", th: "Top 10" }];
 
 function App() {
-  const [phase, setPhase] = React.useState(() => SHEET_CSV_URL ? 'loading' : 'setup');
-  const [error, setError] = React.useState('');
-  const [, forceUpdate] = React.useState(0);
-  const isMobile = window.innerWidth < 768;
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [tab, setTab] = React.useState(() => { try { return localStorage.getItem("sla_tab") || "overview"; } catch { return "overview"; } });
+  const [status, setStatus] = React.useState("idle"); // idle | loading | done | error
+  const [slaData, setSlaData] = React.useState(null);
+  const [errorMsg, setErrorMsg] = React.useState("");
+  const [loadedAt, setLoadedAt] = React.useState(null);
 
-  const load = React.useCallback(() => {
-    if (!SHEET_CSV_URL) { setPhase('setup'); return; }
-    setPhase('loading');
-    window.loadLiveData(SHEET_CSV_URL)
-      .then((data) => {
-        window.DCDATA = data;
-        setPhase('ready');
-        forceUpdate((n) => n + 1);
-      })
-      .catch((err) => {
-        setError(err.message || String(err));
-        setPhase('error');
-      });
+  React.useEffect(() => { try { localStorage.setItem("sla_tab", tab); } catch {} }, [tab]);
+  React.useEffect(() => { document.documentElement.style.setProperty("--accent", t.accent); document.documentElement.dataset.density = t.density; }, [t.accent, t.density]);
+
+  const load = React.useCallback(async () => {
+    const url = window.SHEET_URL;
+    if (!url || !url.trim()) { setStatus("noconfig"); return; }
+    const sheetId = extractSheetId(url);
+    if (!sheetId) { setStatus("error"); setErrorMsg("URL ไม่ถูกต้อง — ต้องเป็น URL ของ Google Sheets"); return; }
+    setStatus("loading");
+    setErrorMsg("");
+    try {
+      const data = await loadSLAData(sheetId);
+      setSlaData(data);
+      setLoadedAt(data.loadedAt);
+      setStatus("done");
+    } catch (e) {
+      setStatus("error");
+      setErrorMsg(e.message || "ไม่สามารถดึงข้อมูลได้");
+    }
   }, []);
 
   React.useEffect(() => { load(); }, [load]);
 
-  if (phase === 'setup')   return <SetupScreen />;
-  if (phase === 'loading') return <LoadingScreen />;
-  if (phase === 'error')   return <ErrorScreen error={error} onRetry={load} />;
+  const fmtTime = (d) => d ? d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : "";
 
   return (
-    <div style={{ minHeight: '100vh' }}>
-      {isMobile ? <MobileB2 /> : <DesktopB2 />}
+    <div className="app">
+      <header className="topbar">
+        <div className="topbar-inner">
+          <div className="brand">
+            <div className="brand-mark">SLA</div>
+            <div>
+              <div className="brand-title">ภาพรวม SLA</div>
+              <div className="brand-sub">ศูนย์กระจายสินค้า</div>
+            </div>
+          </div>
+          <div className="topbar-right">
+            {loadedAt && <span className="last-updated">อัปเดต {fmtTime(loadedAt)}</span>}
+            <button className="refresh-btn" onClick={load} disabled={status === "loading"}>
+              <span className={`refresh-icon${status === "loading" ? " spinning" : ""}`}>↻</span>
+              <span>รีเฟรช</span>
+            </button>
+            <div className="period">
+              <span className="period-label">รอบเปรียบเทียบ</span>
+              <span className="period-val">พ.ค. <span className="period-arrow">→</span> มิ.ย. 2569</span>
+              {slaData?.dataDate && <span className="data-date">{slaData.dataDate}</span>}
+            </div>
+          </div>
+        </div>
+        <nav className="tabs">
+          {TABS.map((tb) => (
+            <button key={tb.key} className={`tab ${tab === tb.key ? "tab-on" : ""}`} onClick={() => setTab(tb.key)}>
+              <span className="tab-th">{tb.th}</span>
+            </button>
+          ))}
+        </nav>
+      </header>
+
+      <main className="content">
+        {status === "noconfig" && (
+          <div className="center-state">
+            <div className="config-box">
+              <div className="config-title">ตั้งค่า Google Sheets URL</div>
+              <div className="config-desc">เปิดไฟล์ <code>index.html</code> แล้วแก้ไขบรรทัดนี้ให้เป็น URL ของ Google Sheets ที่แชร์แบบ "Anyone with the link can view"</div>
+              <div className="config-code">window.SHEET_URL = "https://docs.google.com/spreadsheets/d/YOUR_ID_HERE/...";</div>
+            </div>
+          </div>
+        )}
+        {status === "loading" && (
+          <div className="center-state">
+            <div className="spinner" />
+            <span>กำลังดึงข้อมูลจาก Google Sheets…</span>
+          </div>
+        )}
+        {status === "error" && (
+          <div className="center-state">
+            <div className="error-box">
+              <div className="error-title">ดึงข้อมูลไม่สำเร็จ</div>
+              <div className="error-msg">
+                {errorMsg}<br /><br />
+                ตรวจสอบว่า Google Sheets ตั้งค่า sharing เป็น <b>"Anyone with the link can view"</b> และ URL ถูกต้อง
+              </div>
+            </div>
+            <button className="refresh-btn" onClick={load}>ลองใหม่</button>
+          </div>
+        )}
+        {status === "done" && slaData && (
+          <>
+            {tab === "overview" && <Overview layout={t.overviewLayout} overview={slaData.overview} dcs={slaData.dcs} />}
+            {tab === "trend" && <TrendTab trendData={slaData.trendData} />}
+            {tab === "region" && <RegionTab dcs={slaData.dcs} />}
+            {tab === "bydc" && <ByDC dcs={slaData.dcs} />}
+            {tab === "top" && <TopRank dcs={slaData.dcs} />}
+          </>
+        )}
+      </main>
+
+      <footer className="footer" />
+
+      <TweaksPanel>
+        <TweakSection label="เลย์เอาต์ภาพรวม" />
+        <TweakRadio label="รูปแบบ" value={t.overviewLayout}
+          options={["rows","cards","split","matrix"]}
+          onChange={(v) => setTweak("overviewLayout", v)} />
+        <TweakSection label="ธีม" />
+        <TweakColor label="สีหลัก" value={t.accent}
+          options={["#1f5fb0","#0f766e","#4f46e5","#475569"]}
+          onChange={(v) => setTweak("accent", v)} />
+        <TweakRadio label="ความหนาแน่น" value={t.density}
+          options={["compact","regular","comfy"]}
+          onChange={(v) => setTweak("density", v)} />
+      </TweaksPanel>
     </div>
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 </script>
 </body>
 </html>
